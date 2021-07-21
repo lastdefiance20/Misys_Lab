@@ -423,6 +423,7 @@ int main(int argc, char *argv[]) {
 
   setlocale(LC_ALL, "");
   initscr();
+  echo();
   start_color();
   refresh();
   win0 = newwin(3, 70, 21, 0);

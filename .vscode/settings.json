@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "deque": "cpp",
+        "initializer_list": "cpp",
+        "list": "cpp",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xtree": "cpp",
+        "xutility": "cpp",
+        "mutex": "cpp",
+        "map": "cpp",
+        "istream": "cpp",
+        "queue": "cpp",
+        "iosfwd": "cpp",
+        "thread": "cpp"
+    }
+}

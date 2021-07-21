@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <queue>
 #include <string>
+#include <list>
 #include <unistd.h>
 #include <chrono>
 #include <vector>
@@ -24,7 +25,9 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
-#include <ncurses.h>
+#include <locale.h>
+#include <ncursesw/curses.h>
+#include<map>
 
 #include <CTetris.h>
 
@@ -120,50 +123,62 @@ WINDOW * win0;
 WINDOW * win1;
 WINDOW * win2;
 mutex* m;
-condition_variable cv;
+condition_variable* cv;
 
+/*
 void printMsg(string msg){
   wclear(win0);
 
-  mvwprintw(win0, 0, 0, msg)
+  mvwprintw(win0, 0, 0, msg);
 
   m->lock();
   wrefresh(win0);
   m->unlock();
   return;
 }
+*/
 
-string arrayToString(int array[]){
-  string line;
+void printWindow(CTetris *board, int n){
+  int dy = board->oCScreen.get_dy();
+  int dx = board->oCScreen.get_dx();
+  int dw = board->iScreenDw;
+  int **array = board->oCScreen.get_array();
+  
+  if(n == 1){
+    wclear(win1);
 
-  for(int i=0; i<15; i++){
-    int x = array[i];
-    if(x==0) line.push_back('□');
-    else if(x == 1) line.push_back('■');
-    else line.push_back('XX');
+    for (int y = 0; y < dy - dw; y++) {
+      for (int x = dw; x < dx - dw; x++) {
+        if (array[y][x] == 0)
+          mvwprintw(win1, y, x, "□");
+        else if (array[y][x] < 8)
+          mvwprintw(win1, y, x, "■");
+        else 
+          mvwprintw(win1, y, x, "X");
+      }
+      cout << endl;
+    }
+    wrefresh(win1);
   }
-
-  return line;
+  else{
+    wclear(win2);
+    
+    for (int y = 0; y < dy - dw; y++) {
+      for (int x = dw; x < dx - dw; x++) {
+        if (array[y][x] == 0)
+          mvwprintw(win2, y, x, "□");
+        else if (array[y][x] < 8)
+          mvwprintw(win2, y, x, "■");
+        else 
+          mvwprintw(win2, y, x, "X");
+      }
+      cout << endl;
+    }
+    wrefresh(win2);
+  }
 }
 
-
-void printWindow(window, screen){
- int** array = screen.get_array()
- wclear(window)
-
- for(int y=0; y<(screen.get_dy()-Tetris.iScreenDw); y++){
-  string line = arrayToString(array[y][Tetris.iScreenDw:-Tetris.iScreenDw])
-  mvwprintw(window, y, 0, line);
- }
- 
- m->lock();
- wrefresh(window);
- m->unlock();
- return;
-}
-
-
-char getch() {
+char ggetch() {
   char ch;
   int n;
   while (1) {
@@ -193,65 +208,268 @@ char getch() {
 /*********      Threading code (Observer pattern)     *********/
 /**************************************************************/
 
-
-class Keycontroller{
+class View{
   public:
-    void add
+    queue<CTetris*> boards;
+    int windownum;
 
-}
+    void update(CTetris* board){
+      m->lock();
+      boards.push(board);
+      cv->notify_all();
+      m->unlock();
+    }
+
+    CTetris* read(){
+      unique_lock<mutex> lk(*m);
+      //lock or not, need to wake up
+      if(boards.empty()) cv->wait(lk, [&]{return !boards.empty();});
+      CTetris* board = boards.front();
+      boards.pop();
+      lk.unlock();
+      return board;
+    }
+
+    void addWindow(int n){
+      windownum = n;
+      return;
+    }
+
+    void run(){
+      sleep(3);
+      while(isGameDone == false) {
+        CTetris *board = read();
+        printWindow(board, windownum);
+      }
+    }
+};
+
+class Model : public View{
+  public:
+    list<View> observers;
+    queue<char> keys;
+    map<char, char> keypad;
+
+    void addObserver(View observer){
+      observers.push_back(observer);
+      return;
+    }
+
+    void notifyObservers(CTetris* board){
+      for(View observer : observers){
+        observer.update(board);
+      }
+      return;
+    }
+
+    void update(char key){
+      m->lock();
+      keys.push(key);
+      cv->notify_all();
+      m->unlock();
+      return;
+    }
+
+    char read(){
+      unique_lock<mutex> lk(*m);
+      //lock or not, need to wake up
+      if(keys.empty()) cv->wait(lk, [&]{return !keys.empty();});
+      char key = keys.front();
+      keys.pop();
+      lk.unlock();
+      return key;
+    }
+
+    void addKeypad(map<char, char> keypads){
+      keypad = keypads;
+      return;
+    }
+
+    void run(){
+      sleep(3);
+      CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
+      CTetris *board = new CTetris(ddy, ddx);
+      TetrisState state;
+      char key;
+
+      srand((unsigned int)time(NULL));
+      key = (char)('0' + rand() % MAX_BLK_TYPES);
+      state = board->accept(key);
+      notifyObservers(board);
+
+      while(isGameDone == false) {
+        key = read();
+        if(keypad.find(key)==keypad.end()){
+          key = keypad[key];
+          state = board->accept(key);
+        }
+        if (state == NewBlock) {
+          key = (char)('0' + rand() % MAX_BLK_TYPES);
+          state = board->accept(key);
+          if (state == Finished) {
+            notifyObservers(board);
+            isGameDone = true;
+            cout << endl;
+            ;
+            delete board;
+            return;
+          }
+        }
+        notifyObservers(board);
+        cout << endl;
+        if(key == 'q'){
+          isGameDone = true;
+          cout << endl;
+          delete board;
+          return;
+        }
+      }
+      delete board;
+    }
+};
 
 
+class KeyController : public Model{
+  public:
+    list<Model> observers;
+
+    void addObserver(Model observer){
+      observers.push_back(observer);
+      return;
+    }
+
+    void notifyObservers(char key){
+      for(Model observer : observers){
+        observer.update(key);
+      }
+      return;
+    }
+
+    void run(){
+      sleep(3);
+      while(isGameDone == false){
+        char key = ggetch();
+        notifyObservers(key);
+
+        if(key == 'q'){
+          isGameDone = true;
+          break;
+        }
+      }
+    }
+};
+
+class TimeController : public Model{
+  public:
+    list<Model> observers;
+
+    void addObserver(Model observer){
+      observers.push_back(observer);
+      return;
+    }
+
+    void notifyObservers(char key){
+      for(Model observer : observers){
+        observer.update(key);
+      }
+      return;
+    }
+
+    void run(){
+      sleep(3);
+      while(isGameDone == false){
+        sleep(1);
+
+        char key = 'y';
+        notifyObservers(key);
+      }
+    }
+};
 
 /**************************************************************/
 /****************        Main code        *********************/
 /**************************************************************/
 
 
-int main(){
-  //queue<char> keys;
-  mutex lock;
-  //condition_variable cv;
+int main(int argc, char *argv[]){
+  int dy, dx;
+  char key = 0;
 
-  screen = initstr();
-  screen.clear();
+  if (argc != 3) {
+    cout << "usage: " << argv[0] << " dy dx" << endl;
+    exit(1);
+  }
+  if ((dy = atoi(argv[1])) <= 0 || (dx = atoi(argv[2])) <= 0) {
+    cout << "dy and dx should be greater than 0" << endl;
+    exit(1);
+  }
 
+  ddy = dy;
+  ddx = dx;
+
+  setlocale(LC_ALL, "");
+  initscr();
+  echo();
+  start_color();
+  refresh();
+
+  win0 = newwin(3, 70, 21, 0);
   win1 = newwin(20, 30, 0, 0); 
   win2 = newwin(20, 30, 0, 40);
-  win0 = newwin(3, 70, 21, 0);
 
-  th_view1 = View('view1');
-  th_view1.addWindow(win1);
+  View th_view1;
+  th_view1.addWindow(1);
 
-  th_view2 = View('view2');
-  th_view2.addWindow(win2);
+  View th_view2;
+  th_view2.addWindow(2);
 
-  keypad1 = { 'q': 'q', 'w': 'w', 'a': 'a', 's': 'y', 'd': 'd', ' ': ' ', 'y': 'y' }
-	th_model1 = Model('model1')
-	th_model1.addKeypad(keypad1)
-	th_model1.addObserver(th_view1)
+  map<char, char> keypad1 = {{'q', 'q'}, {'w', 'w'}, {'a', 'a'}, {'s', 's'}, {'d', 'd'}, {' ', ' '}, {'y', 's'}};
+	Model th_model1;
+	th_model1.addKeypad(keypad1);
+	th_model1.addObserver(th_view1);
 
-	keypad2 = { 'u': 'q', 'i': 'w', 'j': 'a', 'k': 'y', 'l': 'd', '\r': ' ', 'y': 'y' }
-	th_model2 = Model('model2')
-	th_model2.addKeypad(keypad2)
-	th_model2.addObserver(th_view2)
+	map<char, char> keypad2 = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 's'}, {'l', 'd'}, {'\r', ' '}, {'y', 's'}};
+	Model th_model2;
+	th_model2.addKeypad(keypad2);
+	th_model2.addObserver(th_view2);
 
-	th_cont1 = KeyController('kcont')
-	th_cont1.addObserver(th_model1)
-	th_cont1.addObserver(th_model2)
+	KeyController th_cont1;
+	th_cont1.addObserver(th_model1);
+	th_cont1.addObserver(th_model2);
 
-	th_cont2 = TimeController('tcont')
-	th_cont2.addObserver(th_model1)
-	th_cont2.addObserver(th_model2)
+  KeyController th_cont2;
+	th_cont2.addObserver(th_model1);
+	th_cont2.addObserver(th_model2);
 
+/*
   vector<thread> threads;
-  threads.push_back(thread(th_view1, &lock));
-  threads.push_back(thread(th_view2, &lock));
-  threads.push_back(thread(th_mode11, &lock));
-  threads.push_back(thread(th_mode12, &lock));
-  threads.push_back(thread(th_cont1, &lock));
-  threads.push_back(thread(th_cont2, &lock));
+  threads.push_back(thread([](){
+    View th_view1;
+    th_view1.run();
+  }));
+  threads.push_back(thread([](){
+    View th_view2;
+    th_view2.run();
+  }));
+  threads.push_back(thread([](){
+	  Model th_model1;
+    th_model1.run();
+  }));
+  threads.push_back(thread([](){
+    Model th_model2;
+    th_model2.run();
+  }));
+  threads.push_back(thread([](){
+	  KeyController th_cont1;
+    th_cont1.run();
+  }));
+  threads.push_back(thread([](){
+    KeyController th_cont2;
+    th_cont2.run();
+  }));
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 1; i++) {
     threads[i].join();
   }
+*/
 }

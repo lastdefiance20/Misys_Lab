@@ -1,6 +1,6 @@
 # Set compiler to use
 CC=g++
-CFLAGS=-g -I. -fpermissive -lncurses
+CFLAGS=-g -I. -fpermissive -lncursesw
 LDFLAGS=
 OBJS=Main.o Matrix.o Tetris.o CTetris.o ttymodes.o
 DEBUG=0
