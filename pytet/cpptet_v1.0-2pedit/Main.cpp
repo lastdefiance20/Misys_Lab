@@ -9,7 +9,6 @@
 #include <condition_variable>
 #include <queue>
 #include <string>
-#include <list>
 #include <unistd.h>
 #include <chrono>
 #include <vector>
@@ -46,10 +45,12 @@ using namespace std;
 #define b_color_black "\x1b[40m"
 
 /**************************************************************/
-/****************  Data model related code  *******************/
+/**************** Linux System Functions **********************/
 /**************************************************************/
-#define MAX_BLK_TYPES 7
-#define MAX_BLK_DEGREES 4
+
+WINDOW * win0;
+WINDOW * win1;
+WINDOW * win2;
 
 char saved_key = 0;
 bool isGameDone = false;
@@ -57,6 +58,69 @@ int tty_cbreak(int fd);	/* put terminal into cbreak mode */
 int tty_reset(int fd);	/* restore terminal's mode */
 int ddy;
 int ddx;
+
+/* Read 1 character - echo defines echo mode */
+// 키보드에서 char 읽음
+char ggetch() {
+  char ch;
+  int n;
+  while (1) {
+    //charbreak - input에 char 하나가 들어오면 input을 종료(break)하고 들어온 char을 터미널에 저장?
+    tty_cbreak(0);
+    //read를 사용하여 저장된 char 가져옴?
+    n = read(0, &ch, 1);
+    //종료된 터미널을 다시 리셋
+    tty_reset(0);
+    if (n > 0)
+      break;
+    else if (n < 0) {
+      if (errno == EINTR) {
+        if (saved_key != 0) {
+          ch = saved_key;
+          saved_key = 0;
+          break;
+	      }
+      }
+    }
+  }
+  return ch;
+}
+
+void sigint_handler(int signo) {
+  // cout << "SIGINT received!" << endl;
+  // do nothing;
+}
+
+void sigalrm_handler(int signo) {
+  alarm(1);
+  saved_key = 's';
+}
+
+void unregisterAlarm() {
+	alarm(0);
+}
+
+void registerAlarm() {
+  struct sigaction act, oact;
+  act.sa_handler = sigalrm_handler;
+  sigemptyset(&act.sa_mask);
+#ifdef SA_INTERRUPT
+  act.sa_flags = SA_INTERRUPT;
+#else
+  act.sa_flags = 0;
+#endif
+  if (sigaction(SIGALRM, &act, &oact) < 0) {
+    cerr << "sigaction error" << endl;
+    exit(1);
+  }
+  alarm(1);
+}
+
+/**************************************************************/
+/**************** Tetris Blocks Definitions *******************/
+/**************************************************************/
+#define MAX_BLK_TYPES 7
+#define MAX_BLK_DEGREES 4
 
 //T%d번으로 블럭의 타입을 설정하고, D%d번으로 오른쪽으로 90도씩 돌린 블럭의 state를 표현한다
 
@@ -116,35 +180,16 @@ int *setOfCBlockArrays[] = {
   T6D0, T6D1, T6D2, T6D3,
 };
 
-/**************************************************************/
-/****************         UI CODE         *********************/
-/**************************************************************/
-WINDOW * win0;
-WINDOW * win1;
-WINDOW * win2;
-mutex* m;
-condition_variable* cv;
 
-/*
-void printMsg(string msg){
-  wclear(win0);
-
-  mvwprintw(win0, 0, 0, msg);
-
-  m->lock();
-  wrefresh(win0);
-  m->unlock();
-  return;
-}
-*/
-
-void printWindow(CTetris *board, int n){
-  int dy = board->oCScreen.get_dy();
-  int dx = board->oCScreen.get_dx();
-  int dw = board->iScreenDw;
-  int **array = board->oCScreen.get_array();
-  
-  if(n == 1){
+//void drawScreen(CTetris *board)
+//void drawScreen(Tetris *board)
+void drawScreen(CTetris *board, int n)
+{
+  if(n==1){
+    int dy = board->oCScreen.get_dy();
+    int dx = board->oCScreen.get_dx();
+    int dw = board->iScreenDw;
+    int **array = board->oCScreen.get_array();
     wclear(win1);
 
     for (int y = 0; y < dy - dw; y++) {
@@ -161,8 +206,12 @@ void printWindow(CTetris *board, int n){
     wrefresh(win1);
   }
   else{
+    int dy = board->oCScreen.get_dy();
+    int dx = board->oCScreen.get_dx();
+    int dw = board->iScreenDw;
+    int **array = board->oCScreen.get_array();
     wclear(win2);
-    
+
     for (int y = 0; y < dy - dw; y++) {
       for (int x = dw; x < dx - dw; x++) {
         if (array[y][x] == 0)
@@ -178,151 +227,63 @@ void printWindow(CTetris *board, int n){
   }
 }
 
-char ggetch() {
-  char ch;
-  int n;
-  while (1) {
-    //charbreak - input에 char 하나가 들어오면 input을 종료(break)하고 들어온 char을 터미널에 저장?
-    tty_cbreak(0);
-    //read를 사용하여 저장된 char 가져옴?
-    n = read(0, &ch, 1);
-    //종료된 터미널을 다시 리셋
-    tty_reset(0);
-    if (n > 0)
-      break;
-    else if (n < 0) {
-      if (errno == EINTR) {
-        if (saved_key != 0) {
-          ch = saved_key;
-          saved_key = 0;
-          break;
-	      }
-      }
-    }
-  }
-  return ch;
-}
-
-
 /**************************************************************/
-/*********      Threading code (Observer pattern)     *********/
+/******************** Tetris Main Loop ************************/
 /**************************************************************/
-
-class View{
-  public:
-    queue<CTetris*> boards;
-    int windownum;
-
-    void update(CTetris* board){
-      m->lock();
-      boards.push(board);
-      cv->notify_all();
-      m->unlock();
-    }
-
-    CTetris* read(){
-      unique_lock<mutex> lk(*m);
-      //lock or not, need to wake up
-      if(boards.empty()) cv->wait(lk, [&]{return !boards.empty();});
-      CTetris* board = boards.front();
-      boards.pop();
-      lk.unlock();
-      return board;
-    }
-
-    void print(){
-      cout<<"view"<<endl;
-    }
-
-    void addWindow(int n){
-      windownum = n;
-      return;
-    }
-
-    void run(){
-      sleep(1);
-      while(isGameDone == false) {
-        CTetris *board = read();
-        printWindow(board, windownum);
-      }
-    }
-};
+condition_variable cv;
+mutex m;
 
 class Model{
   public:
-    View* observers[2];
-    int nobservers = 0;
     queue<char> keys;
-    map<char, char> keypad;
-
-    void addObserver(View* observer){
-      observers[nobservers] = observer;
-      nobservers++;
-      return;
-    }
-
-    void notifyObservers(CTetris* board){
-      for(int i=0; i<nobservers; i++){
-        observers[i]->update(board);
-      }
-      return;
-    }
+    int n;
 
     void update(char key){
-      m->lock();
+      m.lock();
       keys.push(key);
-      cv->notify_all();
-      m->unlock();
+      cv.notify_all();
+      m.unlock();
       return;
     }
 
-    void print(){
-      cout<<"model"<<endl;
+    void setwindow(int x){
+      n = x;
     }
-
-    char read(){
-      unique_lock<mutex> lk(*m);
-      //lock or not, need to wake up
-      if(keys.empty()) cv->wait(lk, [&]{return !keys.empty();});
-      char key = keys.front();
-      keys.pop();
-      lk.unlock();
-      return key;
-    }
-
-    void addKeypad(map<char, char> keypads){
-      keypad = keypads;
-      return;
-    }
-
+  
     void run(){
       sleep(1);
-      m->lock();
-      cout<<"locked"<<endl;
+
+      m.lock();
       CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
-      cout<<"inited"<<endl;
       CTetris *board = new CTetris(ddy, ddx);
-      cout<<"boarded"<<endl;
       TetrisState state;
       char key;
 
       srand((unsigned int)time(NULL));
       key = (char)('0' + rand() % MAX_BLK_TYPES);
       state = board->accept(key);
-      notifyObservers(board);
-      m->unlock();
+      drawScreen(board, n);
+      m.unlock();
 
       while(isGameDone == false) {
-        key = read();
-        if(keypad.find(key)==keypad.end()){
-          key = keypad[key];
-          state = board->accept(key);
-        }
+        unique_lock<mutex> lk(m);
+
+        //lock or not, need to wake up
+        if(keys.empty()) cv.wait(lk, [&]{return !keys.empty();});
+
+        key = keys.front();
+        keys.pop();
+        //unlock
+        lk.unlock();
+
+        state = board->accept(key);
         if (state == NewBlock) {
           key = (char)('0' + rand() % MAX_BLK_TYPES);
           state = board->accept(key);
           if (state == Finished) {
-            notifyObservers(board);
+            m.lock();
+            drawScreen(board, n);
+            m.unlock();
             isGameDone = true;
             cout << endl;
             ;
@@ -330,7 +291,9 @@ class Model{
             return;
           }
         }
-        notifyObservers(board);
+        m.lock();
+        drawScreen(board, n);
+        m.unlock();
         cout << endl;
         if(key == 'q'){
           isGameDone = true;
@@ -343,6 +306,31 @@ class Model{
     }
 };
 
+class TimeController{
+  public:
+    Model* observers[2];
+    int nobservers = 0;
+    
+    void addObserver(Model* observer){
+      observers[nobservers] = observer;
+      nobservers++;
+    }
+
+    void notifyObservers(char key){
+      for(int i=0; i<nobservers; i++){
+        observers[i]->update(key);
+      }
+    }
+
+    void run(){
+      sleep(1);
+
+      while(isGameDone == false){
+        sleep(1);
+        notifyObservers('s');
+      }
+    }
+};
 
 class KeyController{
   public:
@@ -352,21 +340,31 @@ class KeyController{
     void addObserver(Model* observer){
       observers[nobservers] = observer;
       nobservers++;
-      return;
     }
 
-    void notifyObservers(char key){
-      for(int i=0; i<nobservers; i++){
-        observers[i]->update(key);
-      }
-      return;
+    void notifyObservers(char key, int i){
+      observers[i]->update(key);
     }
 
     void run(){
       sleep(1);
       while(isGameDone == false){
         char key = ggetch();
-        notifyObservers(key);
+        cout << key << endl;
+
+        map<char, char> dic = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 'y'}, {'l', 'd'}, {'\r', ' '}, {'y', 'y'}};
+
+        // data 는 쓰레드 사이에서 공유되므로 critical section 에 넣어야 한다.
+        if(dic.find(key)==dic.end()){
+          notifyObservers(key, 0);
+        }
+        else{
+          key = dic[key];
+          notifyObservers(key, 1);
+        }
+
+        // consumer 에게 content 가 준비되었음을 알린다 (wake up consumer!).
+        //cv->notify_one();
 
         if(key == 'q'){
           isGameDone = true;
@@ -376,73 +374,57 @@ class KeyController{
     }
 };
 
-class TimeController{
-  public:
-    Model* observers[2];
-    int nobservers = 0;
+/*
+$ make
+$ ./Main.exe 20 10          # 세로 20 x 가로 10 의 배경화면을 생성하라는 의미임
+*/
+void ModelThread(Model* mclass){
+  mclass->run();
+}
 
-    void addObserver(Model* observer){
-      observers[nobservers] = observer;
-      nobservers++;
-      return;
-    }
+void KeyControllerThread(KeyController* kclass){
+  kclass->run();
+}
 
-    void notifyObservers(char key){
-      for(int i=0; i<nobservers; i++){
-        observers[i]->update(key);
-      }
-      cout<<time<<endl;
-      return;
-    }
+void TimeControllerThread(TimeController* tclass){
+  tclass->run();
+}
 
-    void run(){
-      sleep(1);
-      while(isGameDone == false){
-        sleep(1);
-        notifyObservers('y');
-      }
-    }
-};
-
-/**************************************************************/
-/****************        Main code        *********************/
-/**************************************************************/
-
-
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
   int dy, dx;
   char key = 0;
-
-  ddy = 20;
-  ddx = 15;
 
   setlocale(LC_ALL, "");
   initscr();
   echo();
   start_color();
   refresh();
-
   win0 = newwin(3, 70, 21, 0);
   win1 = newwin(20, 30, 0, 0); 
   win2 = newwin(20, 30, 0, 40);
 
-  View th_view1;
-  th_view1.addWindow(1);
+  mvwprintw(win0, 0, 0, "핼로우");
+  wrefresh(win0);
 
-  View th_view2;
-  th_view2.addWindow(2);
+  if (argc != 3) {
+    cout << "usage: " << argv[0] << " dy dx" << endl;
+    exit(1);
+  }
+  if ((dy = atoi(argv[1])) <= 0 || (dx = atoi(argv[2])) <= 0) {
+    cout << "dy and dx should be greater than 0" << endl;
+    exit(1);
+  }
 
-  map<char, char> keypad1 = {{'q', 'q'}, {'w', 'w'}, {'a', 'a'}, {'s', 's'}, {'d', 'd'}, {' ', ' '}, {'y', 's'}};
-	Model th_model1;
-	th_model1.addKeypad(keypad1);
-	th_model1.addObserver(&th_view1);
+  ddy = dy;
+  ddx = dx;
 
-	map<char, char> keypad2 = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 's'}, {'l', 'd'}, {'\r', ' '}, {'y', 's'}};
-	Model th_model2;
-	th_model2.addKeypad(keypad2);
-	th_model2.addObserver(&th_view2);
+  Model th_model1;
+  th_model1.setwindow(1);
 
-	KeyController th_cont1;
+  Model th_model2;
+  th_model2.setwindow(2);
+
+  KeyController th_cont1;
 	th_cont1.addObserver(&th_model1);
 	th_cont1.addObserver(&th_model2);
 
@@ -450,16 +432,19 @@ int main(int argc, char *argv[]){
 	th_cont2.addObserver(&th_model1);
 	th_cont2.addObserver(&th_model2);
 
-  cout<<"started"<<endl;
   vector<thread> threads;
-  //threads.push_back(thread(&View::run, th_view2));
-  //threads.push_back(thread(&View::run, th_view2));
-  //threads.push_back(thread(&Model::run, th_model1));
-  //threads.push_back(thread(&Model::run, th_model2));
-  //threads.push_back(thread(&KeyController::run, th_cont1));
-  //threads.push_back(thread(&TimeController::run, th_cont2));
+  threads.push_back(thread(ModelThread, &th_model1));
+  threads.push_back(thread(ModelThread, &th_model2));
+  threads.push_back(thread(KeyControllerThread, &th_cont1));
+  threads.push_back(thread(TimeControllerThread, &th_cont2));
 
-  for (int i = 0; i < 1; i++) {
+  threads[0].join();
+  /*
+  for (int i = 0; i < 3; i++) {
     threads[i].join();
   }
+  */
+  cout << "Program terminated!" << endl;
+  exit(0);
+  //return 0;
 }
