@@ -12,17 +12,6 @@
 #include <unistd.h>
 #include <chrono>
 #include <vector>
-#include <pthread.h>
-
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <signal.h>
 
 #include <locale.h>
 #include <ncursesw/curses.h>
@@ -84,36 +73,6 @@ char ggetch() {
     }
   }
   return ch;
-}
-
-void sigint_handler(int signo) {
-  // cout << "SIGINT received!" << endl;
-  // do nothing;
-}
-
-void sigalrm_handler(int signo) {
-  alarm(1);
-  saved_key = 's';
-}
-
-void unregisterAlarm() {
-	alarm(0);
-}
-
-void registerAlarm() {
-  struct sigaction act, oact;
-  act.sa_handler = sigalrm_handler;
-  sigemptyset(&act.sa_mask);
-#ifdef SA_INTERRUPT
-  act.sa_flags = SA_INTERRUPT;
-#else
-  act.sa_flags = 0;
-#endif
-  if (sigaction(SIGALRM, &act, &oact) < 0) {
-    cerr << "sigaction error" << endl;
-    exit(1);
-  }
-  alarm(1);
 }
 
 /**************************************************************/
@@ -180,80 +139,64 @@ int *setOfCBlockArrays[] = {
   T6D0, T6D1, T6D2, T6D3,
 };
 
-
-//void drawScreen(CTetris *board)
-//void drawScreen(Tetris *board)
-void drawScreen(CTetris *board, int n)
+mutex drawm;
+void drawScreen(CTetris *board, WINDOW *win)
 {
-  if(n==1){
-    int dy = board->oCScreen.get_dy();
-    int dx = board->oCScreen.get_dx();
-    int dw = board->iScreenDw;
-    int **array = board->oCScreen.get_array();
-    wclear(win1);
+  int dy = board->oCScreen.get_dy();
+  int dx = board->oCScreen.get_dx();
+  int dw = board->iScreenDw;
+  int **array = board->oCScreen.get_array();
+  wclear(win);
 
-    for (int y = 0; y < dy - dw; y++) {
-      for (int x = dw; x < dx - dw; x++) {
-        if (array[y][x] == 0)
-          mvwprintw(win1, y, x, "□");
-        else if (array[y][x] < 8)
-          mvwprintw(win1, y, x, "■");
-        else 
-          mvwprintw(win1, y, x, "X");
+  for (int y = 0; y < dy - dw; y++) {
+    for (int x = dw; x < dx - dw; x++) {
+      if (array[y][x] == 0){
+        mvwaddstr(win, y, x, "□");
       }
-      cout << endl;
-    }
-    wrefresh(win1);
-  }
-  else{
-    int dy = board->oCScreen.get_dy();
-    int dx = board->oCScreen.get_dx();
-    int dw = board->iScreenDw;
-    int **array = board->oCScreen.get_array();
-    wclear(win2);
-
-    for (int y = 0; y < dy - dw; y++) {
-      for (int x = dw; x < dx - dw; x++) {
-        if (array[y][x] == 0)
-          mvwprintw(win2, y, x, "□");
-        else if (array[y][x] < 8)
-          mvwprintw(win2, y, x, "■");
-        else 
-          mvwprintw(win2, y, x, "X");
+      else if (array[y][x] < 8){
+        wattron(win, COLOR_PAIR(array[y][x]));
+        mvwaddstr(win, y, x, "■");
+        wattroff(win, COLOR_PAIR(array[y][x]));
       }
-      cout << endl;
+      else 
+        mvwaddstr(win, y, x, "X");
     }
-    wrefresh(win2);
+    cout << endl;
   }
+  drawm.lock();
+  wrefresh(win);
+  drawm.unlock();
 }
 
 /**************************************************************/
 /******************** Tetris Main Loop ************************/
 /**************************************************************/
-condition_variable cv;
-mutex m;
 
 class Model{
   public:
     queue<char> keys;
-    int n;
+    WINDOW *n;
+    mutex m;
+    condition_variable cv;
 
     void update(char key){
-      m.lock();
+      //m.lock()를 쓰면 오류가 나서 유니크 락을 써줘야함 이유가 뭘까?
+      unique_lock<mutex> lk(m);
       keys.push(key);
       cv.notify_all();
-      m.unlock();
+      lk.unlock();
       return;
     }
 
-    void setwindow(int x){
+    void setwindow(WINDOW *x){
       n = x;
+    }
+
+    void draw(){
+
     }
   
     void run(){
-      sleep(1);
-
-      m.lock();
       CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
       CTetris *board = new CTetris(ddy, ddx);
       TetrisState state;
@@ -263,7 +206,6 @@ class Model{
       key = (char)('0' + rand() % MAX_BLK_TYPES);
       state = board->accept(key);
       drawScreen(board, n);
-      m.unlock();
 
       while(isGameDone == false) {
         unique_lock<mutex> lk(m);
@@ -281,9 +223,7 @@ class Model{
           key = (char)('0' + rand() % MAX_BLK_TYPES);
           state = board->accept(key);
           if (state == Finished) {
-            m.lock();
             drawScreen(board, n);
-            m.unlock();
             isGameDone = true;
             cout << endl;
             ;
@@ -291,9 +231,7 @@ class Model{
             return;
           }
         }
-        m.lock();
         drawScreen(board, n);
-        m.unlock();
         cout << endl;
         if(key == 'q'){
           isGameDone = true;
@@ -323,7 +261,6 @@ class TimeController{
     }
 
     void run(){
-      sleep(1);
 
       while(isGameDone == false){
         sleep(1);
@@ -347,7 +284,6 @@ class KeyController{
     }
 
     void run(){
-      sleep(1);
       while(isGameDone == false){
         char key = ggetch();
         cout << key << endl;
@@ -398,12 +334,20 @@ int main(int argc, char *argv[]) {
   initscr();
   echo();
   start_color();
-  refresh();
+
+  init_pair(1, COLOR_RED, COLOR_BLACK);
+  init_pair(2, COLOR_GREEN, COLOR_BLACK);
+  init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+  init_pair(4, COLOR_BLUE, COLOR_BLACK);
+  init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+  init_pair(6, COLOR_CYAN, COLOR_BLACK);
+  init_pair(7, COLOR_WHITE, COLOR_BLACK);
+
   win0 = newwin(3, 70, 21, 0);
   win1 = newwin(20, 30, 0, 0); 
   win2 = newwin(20, 30, 0, 40);
-
-  mvwprintw(win0, 0, 0, "핼로우");
+  
+  mvwprintw(win0, 0, 0, "테트리스 2인용입니다"); //의심 검증을 한번 넣어보기
   wrefresh(win0);
 
   if (argc != 3) {
@@ -419,10 +363,10 @@ int main(int argc, char *argv[]) {
   ddx = dx;
 
   Model th_model1;
-  th_model1.setwindow(1);
+  th_model1.setwindow(win1);
 
   Model th_model2;
-  th_model2.setwindow(2);
+  th_model2.setwindow(win2);
 
   KeyController th_cont1;
 	th_cont1.addObserver(&th_model1);
@@ -445,6 +389,7 @@ int main(int argc, char *argv[]) {
   }
   */
   cout << "Program terminated!" << endl;
+  endwin();
   exit(0);
   //return 0;
 }

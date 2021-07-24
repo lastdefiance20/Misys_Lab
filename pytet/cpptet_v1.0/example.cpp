@@ -1,5 +1,5 @@
 #include <iostream>
-#include <ncurses.h>
+#include <ncursesw/ncurses.h>
 #include <string>
 
 using namespace std;
@@ -12,15 +12,24 @@ void printman(){
 }
 
 int main(){
+    setlocale(LC_ALL, "");
     initscr();
     start_color();
+    init_pair(1, COLOR_RED, COLOR_BLACK);
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);
     refresh();
 
     win1 = newwin(20, 30, 0, 0); 
     win2 = newwin(20, 30, 0, 40);
 
-    mvwprintw(win2, 0, 0, "this is me");
-    mvwprintw(win2, 0, 0, "this is you");
+    wattron(win1, COLOR_PAIR(1));
+    mvwprintw(win1,0,0,"□");
+    wattroff(win1, COLOR_PAIR(1));
+
+    attron(COLOR_PAIR(2));
+    waddstr(win2,"□ins");
+    attroff(COLOR_PAIR(2));
+
     wrefresh(win1);
     wrefresh(win2);
     getch();
