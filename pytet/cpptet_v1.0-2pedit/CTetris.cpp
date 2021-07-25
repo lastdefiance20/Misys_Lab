@@ -20,6 +20,10 @@ CTetris::CTetris(int iScreenDyy, int iScreenDxx):Tetris(iScreenDyy, iScreenDxx){
     oCScreen = Matrix(iCScreen);
 };
 
+void CTetris::deleteonce(){
+    delete [] setOfCBlockObjects;
+}
+
 CTetris::~CTetris(){
     delete [] setOfCBlockObjects;
 }

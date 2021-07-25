@@ -21,18 +21,6 @@
 
 using namespace std;
 
-#define color_normal "\x1b[0m"
-#define color_red "\x1b[31m"
-#define color_green "\x1b[32m"
-#define color_yellow "\x1b[33m"
-#define color_blue "\x1b[34m"
-#define color_magenta "\x1b[35m"
-#define color_cyan "\x1b[36m"
-#define color_white "\x1b[37m"
-#define color_black "\x1b[30m"
-#define color_pink "\x1b[95m"
-#define b_color_black "\x1b[40m"
-
 /**************************************************************/
 /**************** Linux System Functions **********************/
 /**************************************************************/
@@ -43,6 +31,8 @@ WINDOW * win2;
 
 char saved_key = 0;
 bool isGameDone = false;
+bool returnName = false;
+string loser;
 int tty_cbreak(int fd);	/* put terminal into cbreak mode */
 int tty_reset(int fd);	/* restore terminal's mode */
 int ddy;
@@ -139,6 +129,8 @@ int *setOfCBlockArrays[] = {
   T6D0, T6D1, T6D2, T6D3,
 };
 
+//drawScreen에서 refresh가 겹치면 window가 깨지는 현상 발생
+//drawm 뮤택스로 동시에 window refresh 방지
 mutex drawm;
 void drawScreen(CTetris *board, WINDOW *win)
 {
@@ -154,6 +146,8 @@ void drawScreen(CTetris *board, WINDOW *win)
         mvwaddstr(win, y, x, "□");
       }
       else if (array[y][x] < 8){
+        //attron이 안되던 이유는 window 설정을 해주지 않아서임
+        //앞에 w를 붙여 wattron으로 만들어서 색상 바꿀 창을 명시해줌
         wattron(win, COLOR_PAIR(array[y][x]));
         mvwaddstr(win, y, x, "■");
         wattroff(win, COLOR_PAIR(array[y][x]));
@@ -168,6 +162,16 @@ void drawScreen(CTetris *board, WINDOW *win)
   drawm.unlock();
 }
 
+//win0 창에 종료메세지 등 메세지를 출력한다
+void printMsg(string str){
+  //string -> char으로 변환하여 printw가 출력 가능한 char 형식으로 변환해준다
+  const char *message = str.c_str();
+  wclear(win0);
+  wprintw(win0, message);
+  //게임이 끝나고 출력해주기 때문에 refreash 겹칠 염려 X, 뮤택스 보호가 필요없다
+  wrefresh(win0);
+}
+
 /**************************************************************/
 /******************** Tetris Main Loop ************************/
 /**************************************************************/
@@ -175,29 +179,43 @@ void drawScreen(CTetris *board, WINDOW *win)
 class Model{
   public:
     queue<char> keys;
+    map<char, char> keypad;
     WINDOW *n;
-    mutex m;
-    condition_variable cv;
+    mutex m; //keys에 동시접근을 막기 위한 뮤택스
+    condition_variable cv; //keys에 key가 들어옴을 알리기 위한 CV
+    string pname;
+
+    //플레이어 이름 설정
+    Model(string name){
+      pname = name;
+    }
 
     void update(char key){
-      //m.lock()를 쓰면 오류가 나서 유니크 락을 써줘야함 이유가 뭘까?
-      unique_lock<mutex> lk(m);
+      m.lock();
       keys.push(key);
       cv.notify_all();
-      lk.unlock();
-      return;
+      m.unlock();
+    }
+
+    void setkeypad(map<char,char> keypad_ex){
+      keypad = keypad_ex;
     }
 
     void setwindow(WINDOW *x){
       n = x;
     }
 
-    void draw(){
-
+    char read(){
+      unique_lock<mutex> lk(m);
+      //keys에 key가 들어올때까지 대기, sleep 상태에서는 뮤택스 unlocked
+      if(keys.empty()) cv.wait(lk, [&]{return !keys.empty();});
+      char key = keys.front();
+      keys.pop();
+      lk.unlock();
+      return key;
     }
   
     void run(){
-      CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
       CTetris *board = new CTetris(ddy, ddx);
       TetrisState state;
       char key;
@@ -208,39 +226,36 @@ class Model{
       drawScreen(board, n);
 
       while(isGameDone == false) {
-        unique_lock<mutex> lk(m);
-
-        //lock or not, need to wake up
-        if(keys.empty()) cv.wait(lk, [&]{return !keys.empty();});
-
-        key = keys.front();
-        keys.pop();
-        //unlock
-        lk.unlock();
-
-        state = board->accept(key);
-        if (state == NewBlock) {
-          key = (char)('0' + rand() % MAX_BLK_TYPES);
+        key = read();
+        //keypad에 존재하면 keypad 딕셔너리 자료형으로 알맞는 key로
+        //변환한 다음, key에 맞는 동작 수행
+        if(keypad.find(key)!=keypad.end()){
+          key = keypad[key];
           state = board->accept(key);
-          if (state == Finished) {
-            drawScreen(board, n);
+
+          if (state == NewBlock) {
+            key = (char)('0' + rand() % MAX_BLK_TYPES);
+            state = board->accept(key);
+            if (state == Finished) {
+              drawScreen(board, n);
+              isGameDone = true;
+              break;
+            }
+          }
+          drawScreen(board, n);
+          cout << endl;
+          if(key == 'q'){
             isGameDone = true;
-            cout << endl;
-            ;
-            delete board;
-            return;
+            break;
           }
         }
-        drawScreen(board, n);
-        cout << endl;
-        if(key == 'q'){
-          isGameDone = true;
-          cout << endl;
-          delete board;
-          return;
-        }
       }
-      delete board;
+      //진사람 출력(먼저 보드가 찬사람)
+      if (returnName==false){
+        returnName=true;
+        loser=pname;
+      }
+      //delete board;
     }
 };
 
@@ -261,10 +276,10 @@ class TimeController{
     }
 
     void run(){
-
+      //1초마다 아래로 내려가게 함
       while(isGameDone == false){
         sleep(1);
-        notifyObservers('s');
+        notifyObservers('y');
       }
     }
 };
@@ -279,29 +294,18 @@ class KeyController{
       nobservers++;
     }
 
-    void notifyObservers(char key, int i){
-      observers[i]->update(key);
+    void notifyObservers(char key){
+      for(int i=0; i<nobservers; i++){
+        observers[i]->update(key);
+      }
     }
 
     void run(){
+      //key값을 받아서 Main으로 전달해줌
       while(isGameDone == false){
         char key = ggetch();
         cout << key << endl;
-
-        map<char, char> dic = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 'y'}, {'l', 'd'}, {'\r', ' '}, {'y', 'y'}};
-
-        // data 는 쓰레드 사이에서 공유되므로 critical section 에 넣어야 한다.
-        if(dic.find(key)==dic.end()){
-          notifyObservers(key, 0);
-        }
-        else{
-          key = dic[key];
-          notifyObservers(key, 1);
-        }
-
-        // consumer 에게 content 가 준비되었음을 알린다 (wake up consumer!).
-        //cv->notify_one();
-
+        notifyObservers(key);
         if(key == 'q'){
           isGameDone = true;
           break;
@@ -310,10 +314,6 @@ class KeyController{
     }
 };
 
-/*
-$ make
-$ ./Main.exe 20 10          # 세로 20 x 가로 10 의 배경화면을 생성하라는 의미임
-*/
 void ModelThread(Model* mclass){
   mclass->run();
 }
@@ -330,26 +330,7 @@ int main(int argc, char *argv[]) {
   int dy, dx;
   char key = 0;
 
-  setlocale(LC_ALL, "");
-  initscr();
-  echo();
-  start_color();
-
-  init_pair(1, COLOR_RED, COLOR_BLACK);
-  init_pair(2, COLOR_GREEN, COLOR_BLACK);
-  init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-  init_pair(4, COLOR_BLUE, COLOR_BLACK);
-  init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
-  init_pair(6, COLOR_CYAN, COLOR_BLACK);
-  init_pair(7, COLOR_WHITE, COLOR_BLACK);
-
-  win0 = newwin(3, 70, 21, 0);
-  win1 = newwin(20, 30, 0, 0); 
-  win2 = newwin(20, 30, 0, 40);
-  
-  mvwprintw(win0, 0, 0, "테트리스 2인용입니다"); //의심 검증을 한번 넣어보기
-  wrefresh(win0);
-
+  //테트리스 창 크기 설정
   if (argc != 3) {
     cout << "usage: " << argv[0] << " dy dx" << endl;
     exit(1);
@@ -362,10 +343,39 @@ int main(int argc, char *argv[]) {
   ddy = dy;
   ddx = dx;
 
-  Model th_model1;
+  setlocale(LC_ALL, ""); //네모 출력을 위한 설정
+  initscr(); //curses 라이브러리 창 시작
+  start_color(); //color 사용 시작
+
+  //color pair 생성, curses에서는 총 8가지 컬러 지원
+  init_pair(1, COLOR_RED, COLOR_BLACK);
+  init_pair(2, COLOR_GREEN, COLOR_BLACK);
+  init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+  init_pair(4, COLOR_BLUE, COLOR_BLACK);
+  init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+  init_pair(6, COLOR_CYAN, COLOR_BLACK);
+  init_pair(7, COLOR_WHITE, COLOR_BLACK);
+
+  //창 생성
+  win0 = newwin(3, 70, 21, 0);
+  win1 = newwin(20, 30, 0, 0); 
+  win2 = newwin(20, 30, 0, 40);
+  
+  printMsg("테트리스 2인용입니다");
+
+  //initialize는 한번으로 충분함
+  CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
+
+  //1p, 2p 플레이어 키패드
+  map<char,char> dic1={{'q','q'},{'w','w'},{'a','a'},{'s','s'},{'d','d'},{' ',' '},{'y','s'}};
+  map<char, char> dic2 = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 's'}, {'l', 'd'}, {'\r', ' '}, {'y', 's'}};
+
+  Model th_model1("player 1");
+  th_model1.setkeypad(dic1);
   th_model1.setwindow(win1);
 
-  Model th_model2;
+  Model th_model2("player 2");
+  th_model2.setkeypad(dic2);
   th_model2.setwindow(win2);
 
   KeyController th_cont1;
@@ -382,13 +392,21 @@ int main(int argc, char *argv[]) {
   threads.push_back(thread(KeyControllerThread, &th_cont1));
   threads.push_back(thread(TimeControllerThread, &th_cont2));
 
+  //0번 메인 쓰레드의 종료만 확인한다. 이 친구가 종료되면
+  //다른 친구들이 종료될때 까지 기다려줄 필요가 없기 때문이다.
+  //(isGameDone == false임이 자명하기 때문에)
   threads[0].join();
-  /*
-  for (int i = 0; i < 3; i++) {
-    threads[i].join();
-  }
-  */
-  cout << "Program terminated!" << endl;
+
+  //진사람 출력(먼저 보드가 찬사람)
+  string endMsg = "Program terminated! ";
+  endMsg.append(loser);
+  endMsg.append(" Lose");
+  printMsg(endMsg);
+  
+  //delete board를 이용하여CTetris의 소멸자가 두번 발동되면 지운 주소에
+  //다시 접근하여 에러가 발생함. 따라서 한번만 소멸하도록 수동으로 수행
+  CTetris::deleteonce();
+  sleep(5);
   endwin();
   exit(0);
   //return 0;

@@ -12,6 +12,7 @@
         "istream": "cpp",
         "queue": "cpp",
         "iosfwd": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "system_error": "cpp"
     }
 }

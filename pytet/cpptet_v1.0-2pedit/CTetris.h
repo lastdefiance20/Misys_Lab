@@ -11,6 +11,7 @@ public:
     Matrix currCBlk;
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
+    static void deleteonce();
     CTetris(int iScreenDyy, int iScreenDxx);
     TetrisState accept(char key);
     void deleteFullLines();
