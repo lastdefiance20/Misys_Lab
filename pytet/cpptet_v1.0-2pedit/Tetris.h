@@ -32,6 +32,7 @@ public:
     Matrix arrayScreen;
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
+    static void deletestatic();
     Matrix createArrayscreen();
     Tetris(int iScreenDyy, int iScreenDxx);
     TetrisState accept(char key);

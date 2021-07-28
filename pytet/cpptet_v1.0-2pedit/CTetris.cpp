@@ -14,19 +14,17 @@ void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREE
     }
 };
 
+void CTetris::deletestatic(){
+    delete [] setOfCBlockObjects;
+    //cout<<"deleted Tetris C"<<endl;
+    Tetris::deletestatic();
+};
+
 CTetris::CTetris(int iScreenDyy, int iScreenDxx):Tetris(iScreenDyy, iScreenDxx){
     arrayScreen = createArrayscreen();
     iCScreen = Matrix(arrayScreen);
     oCScreen = Matrix(iCScreen);
 };
-
-void CTetris::deleteonce(){
-    delete [] setOfCBlockObjects;
-}
-
-CTetris::~CTetris(){
-    delete [] setOfCBlockObjects;
-}
 
 TetrisState CTetris::accept(char key){
     Matrix tempBlk;
@@ -71,4 +69,7 @@ void CTetris::deleteFullLines(){
             oCScreen.paste(&CtempScreen,1,0);
         }
     }
+};
+
+CTetris::~CTetris(){
 };

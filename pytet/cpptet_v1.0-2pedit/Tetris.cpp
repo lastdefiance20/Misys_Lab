@@ -69,6 +69,11 @@ void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES
     iScreenDw = arrayBlk_maxsize;
 };
 
+void Tetris::deletestatic(){
+    delete [] setOfBlockObjects;
+    //cout<<"deleted Tetris"<<endl;
+};
+
 Matrix Tetris::createArrayscreen(){
     arrayScreenDx = iScreenDw*2 + iScreenDx;
     arrayScreenDy = iScreenDy + iScreenDw;
@@ -197,5 +202,4 @@ int Tetris::deleteFullLines(){
 };
 
 Tetris::~Tetris(){
-    delete [] setOfBlockObjects;
 };

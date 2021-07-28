@@ -15,7 +15,10 @@
 
 #include <locale.h>
 #include <ncursesw/curses.h>
-#include<map>
+#include <map>
+
+#include <sys/types.h>
+#include <sys/time.h>
 
 #include <CTetris.h>
 
@@ -38,28 +41,61 @@ int tty_reset(int fd);	/* restore terminal's mode */
 int ddy;
 int ddx;
 
+int kbhit (void)
+{
+  struct timeval tv; //timeval에는 sec와 usec를 가지고 있다
+  fd_set rdfs; //파일 디스크립터, 입력/출력 리소스에 액세스하는 데 사용되는 추상표현
+ 
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+ 
+  FD_ZERO(&rdfs); //fds 스트럭쳐를 0으로 초기화
+
+  //FD가 STDIN_FILENO(0)에 해당하는 파일(표준입력파일)
+  //에서 데이터가 변하는지(이벤트가 발생하는지) 체크할거니까 1로 세팅
+  FD_SET (STDIN_FILENO, &rdfs);
+ 
+  //tv는 함수 호출 후, 무한 대기 상태에 빠지지 않도록 타임-아웃(time-out) 설정
+  //select 이후 변화가생긴 파일 디스크립터는 1로 세팅됨
+  select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+
+  //fds 스트럭처에 있는 stdin이 1로 세팅되어 있는가?
+  return FD_ISSET(STDIN_FILENO, &rdfs); //==이벤트가 발생 했는가
+
+  //https://moolgogiheart.tistory.com/72
+  //https://orange-makiyato.tistory.com/6
+  //https://yms2047.tistory.com/entry/select-함수-사용법
+}
+
 /* Read 1 character - echo defines echo mode */
 // 키보드에서 char 읽음
 char ggetch() {
   char ch;
   int n;
   while (1) {
-    //charbreak - input에 char 하나가 들어오면 input을 종료(break)하고 들어온 char을 터미널에 저장?
     tty_cbreak(0);
-    //read를 사용하여 저장된 char 가져옴?
-    n = read(0, &ch, 1);
-    //종료된 터미널을 다시 리셋
-    tty_reset(0);
-    if (n > 0)
-      break;
-    else if (n < 0) {
-      if (errno == EINTR) {
-        if (saved_key != 0) {
-          ch = saved_key;
-          saved_key = 0;
-          break;
-	      }
+    if(kbhit()){
+      //charbreak - input에 char 하나가 들어오면 input을 종료(break)하고 들어온 char을 터미널에 저장?
+      //read를 사용하여 저장된 char 가져옴?
+      n = read(0, &ch, 1);
+      //종료된 터미널을 다시 리셋
+      tty_reset(0);
+      if (n > 0)
+        break;
+      else if (n < 0) {
+        if (errno == EINTR) {
+          if (saved_key != 0) {
+            ch = saved_key;
+            saved_key = 0;
+            break;
+          }
+        }
       }
+    }
+    //1초마다 확인한다
+    if(isGameDone == true){
+      ch = 'q';
+      break;
     }
   }
   return ch;
@@ -162,14 +198,17 @@ void drawScreen(CTetris *board, WINDOW *win)
   drawm.unlock();
 }
 
+string endmsg;
 //win0 창에 종료메세지 등 메세지를 출력한다
 void printMsg(string str){
+  endmsg.append(str);
   //string -> char으로 변환하여 printw가 출력 가능한 char 형식으로 변환해준다
-  const char *message = str.c_str();
+  const char *message = endmsg.c_str();
   wclear(win0);
   wprintw(win0, message);
-  //게임이 끝나고 출력해주기 때문에 refreash 겹칠 염려 X, 뮤택스 보호가 필요없다
+  drawm.lock();
   wrefresh(win0);
+  drawm.unlock();
 }
 
 /**************************************************************/
@@ -255,7 +294,12 @@ class Model{
         returnName=true;
         loser=pname;
       }
-      //delete board;
+      string breaked = " breaked\n";
+      pname.append(breaked);
+      printMsg(pname);
+      //cout<<board->currCBlk<<endl;
+      delete board;
+      //cout<<"deleted really"<<endl;
     }
 };
 
@@ -263,7 +307,13 @@ class TimeController{
   public:
     Model* observers[2];
     int nobservers = 0;
-    
+    string cname;
+
+    //컨트롤러 이름 설정
+    TimeController(string name){
+      cname = name;
+    }
+
     void addObserver(Model* observer){
       observers[nobservers] = observer;
       nobservers++;
@@ -281,13 +331,23 @@ class TimeController{
         sleep(1);
         notifyObservers('y');
       }
+      string breaked = " breaked\n";
+      cname.append(breaked);
+      printMsg(cname);
     }
 };
 
+//키컨트롤러가 중간에 빠져나가는 방법이 필요하다
 class KeyController{
   public:
     Model* observers[2];
     int nobservers = 0;
+    string cname;
+
+    //컨트롤러 이름 설정
+    KeyController(string name){
+      cname = name;
+    }
 
     void addObserver(Model* observer){
       observers[nobservers] = observer;
@@ -304,27 +364,17 @@ class KeyController{
       //key값을 받아서 Main으로 전달해줌
       while(isGameDone == false){
         char key = ggetch();
-        cout << key << endl;
         notifyObservers(key);
         if(key == 'q'){
           isGameDone = true;
           break;
         }
       }
+      string breaked = " breaked\n";
+      cname.append(breaked);
+      printMsg(cname);
     }
 };
-
-void ModelThread(Model* mclass){
-  mclass->run();
-}
-
-void KeyControllerThread(KeyController* kclass){
-  kclass->run();
-}
-
-void TimeControllerThread(TimeController* tclass){
-  tclass->run();
-}
 
 int main(int argc, char *argv[]) {
   int dy, dx;
@@ -357,11 +407,11 @@ int main(int argc, char *argv[]) {
   init_pair(7, COLOR_WHITE, COLOR_BLACK);
 
   //창 생성
-  win0 = newwin(3, 70, 21, 0);
+  win0 = newwin(8, 70, 21, 0);
   win1 = newwin(20, 30, 0, 0); 
   win2 = newwin(20, 30, 0, 40);
   
-  printMsg("테트리스 2인용입니다");
+  printMsg("테트리스 2인용입니다\n");
 
   //initialize는 한번으로 충분함
   CTetris::init(setOfCBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
@@ -378,25 +428,27 @@ int main(int argc, char *argv[]) {
   th_model2.setkeypad(dic2);
   th_model2.setwindow(win2);
 
-  KeyController th_cont1;
+  KeyController th_cont1("keycontrol");
 	th_cont1.addObserver(&th_model1);
 	th_cont1.addObserver(&th_model2);
 
-  TimeController th_cont2;
+  TimeController th_cont2("timecontrol");
 	th_cont2.addObserver(&th_model1);
 	th_cont2.addObserver(&th_model2);
 
   vector<thread> threads;
-  threads.push_back(thread(ModelThread, &th_model1));
-  threads.push_back(thread(ModelThread, &th_model2));
-  threads.push_back(thread(KeyControllerThread, &th_cont1));
-  threads.push_back(thread(TimeControllerThread, &th_cont2));
+  //https://stackoverflow.com/questions/10998780/stdthread-calling-method-of-class
+  //이런 방식을 사용하면 따로 함수를 정의하지 않고 쓰레드로 넣을 수 있다
+  //원하는 클래스의 멤버 함수와 클래스를 넣어주면 된다
+  threads.push_back(thread(&Model::run, &th_model1));
+  threads.push_back(thread(&Model::run, &th_model2));
+  threads.push_back(thread(&KeyController::run, &th_cont1));
+  threads.push_back(thread(&TimeController::run, &th_cont2));
 
-  //0번 메인 쓰레드의 종료만 확인한다. 이 친구가 종료되면
-  //다른 친구들이 종료될때 까지 기다려줄 필요가 없기 때문이다.
-  //(isGameDone == false임이 자명하기 때문에)
-  threads[0].join();
-
+  for(int i = 0; i < 4; i++){
+    threads[i].join();
+  }
+  
   //진사람 출력(먼저 보드가 찬사람)
   string endMsg = "Program terminated! ";
   endMsg.append(loser);
@@ -405,9 +457,36 @@ int main(int argc, char *argv[]) {
   
   //delete board를 이용하여CTetris의 소멸자가 두번 발동되면 지운 주소에
   //다시 접근하여 에러가 발생함. 따라서 한번만 소멸하도록 수동으로 수행
-  CTetris::deleteonce();
+  //CTetris::deleteonce();
+
+  //하지만 이러면 소멸자의 의미가 없음 왜 발생하는지 추적해야 함
+  //우선 delete board를 수행할 때 첫번째 수행을 완료하고 두번째 수행에서
+  //세그멘테이션 오류가 뜨게 됨. 이 오류는 잘못된 주소를 참조한 것이기 때문에 발생한다.
+  //우선 삭제된 곳에 다시 접근했다고 가정하고 저번에도 문제를 풀었다.
+
+  //그렇다면 왜 삭제된 곳에 접근했는지가 의문이다.
+  //우선 setofcblockobject의 포인터를 출력해보았더니 모델 두구간이 같은 주소를 가리키고 있다.
+  //이말은 우리가 setofcblockobject를 두번 삭제할 경우에 에러가 발생하는것은 당연하다는 것이다.
+
+  //우선 board의 포인터를 출력해보았더니 모델 두구간이 다른 주소를 가리키고 있다.
+  //이는 class가 따로 생성되지 않았다는 뜻이다. 따라서 board만 두번 지웠을 경우에도 에러가 발생한다.
+
+  //왜 setofcblockobject를 주석 처리함에도 우리가 동적할당한 new board가 두번 삭제될때 에러가 발생할까
+  //그것은 CTetris가 tetris를 상속받았기 때문에 CTetris의 소멸자가 발생할 때 Tetris의 소멸자까지 발생하기 때문에
+  //Tetris의 setofblockobject도 주석 처리해야 한다는 것이다.
+
+  //그렇다면 왜 setofblockobject의 주소값이 같을까? 혹시 static 정적 변수이기 때문인가?
+  //그렇다면 한번만 삭제되어야 하는가?
+
+  //한번만 삭제되어야하는 이유는 static이다. static은 같은 주소를 가지고 있다.
+  //삭제를 하지 않는 것이 최선일 때도 있고, asexit으로 명시적으로 해제하는
+  //방법을 쓸수도 있다고 한다.
+
+  //https://stackoverflow.com/questions/2429408/c-freeing-static-variables
+  
+  //CTetris::deletestatic();
   sleep(5);
   endwin();
-  exit(0);
-  //return 0;
+  atexit(CTetris::deletestatic);
+  return 0;
 }
