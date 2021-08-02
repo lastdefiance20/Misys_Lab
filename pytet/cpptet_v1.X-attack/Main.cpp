@@ -165,6 +165,12 @@ int *setOfCBlockArrays[] = {
   T6D0, T6D1, T6D2, T6D3,
 };
 
+struct controlBox{
+  char key;
+  Matrix lines;
+  bool iskey;
+};
+
 //drawScreen에서 refresh가 겹치면 window가 깨지는 현상 발생
 //drawm 뮤택스로 동시에 window refresh 방지
 mutex drawm;
@@ -215,23 +221,102 @@ void printMsg(string str){
 /******************** Tetris Main Loop ************************/
 /**************************************************************/
 
-class Model{
+class View{
   public:
-    queue<char> keys;
-    map<char, char> keypad;
+    queue<CTetris*> boards;
     WINDOW *n;
     mutex m; //keys에 동시접근을 막기 위한 뮤택스
     condition_variable cv; //keys에 key가 들어옴을 알리기 위한 CV
-    string pname;
+    string vname;
 
-    //플레이어 이름 설정
+    View(string name){
+      vname = name;
+    }
+
+    void update(CTetris* board){
+      m.lock();
+      boards.push(board);
+      cv.notify_all();
+      m.unlock();
+      return;
+    }
+
+    void setwindow(WINDOW *x){
+      n = x;
+    }
+
+    void run(){
+      while(isGameDone == false){
+        unique_lock<mutex> lk(m);
+        if(boards.empty()) cv.wait(lk, [&]{return !boards.empty();});
+        CTetris* board = boards.front();
+        boards.pop();
+        lk.unlock();
+        drawScreen(board, n);
+      }
+      string breaked = " breaked\n";
+      vname.append(breaked);
+      printMsg(vname);
+    }
+};
+
+class Model{
+  public:
+    queue<controlBox> CBs;
+    map<char, char> keypad;
+    mutex m; //keys에 동시접근을 막기 위한 뮤택스
+    condition_variable cv; //keys에 key가 들어옴을 알리기 위한 CV
+    string pname;
+    View* observers[2];
+    Model* Mobservers[2];
+    int nobservers = 0;
+    int Mnobservers = 0;
+
+    Matrix tmpdelRect;
+    Matrix delRect;
+
+    void addViewObserver(View* observer){
+      observers[nobservers] = observer;
+      nobservers++;
+    }
+
+    void addModelObserver(Model* Mobserver){
+      Mobservers[Mnobservers] = Mobserver;
+      Mnobservers++;
+    }
+
+    void notifyModelObservers(Matrix lines){
+      for(int i=0; i<Mnobservers; i++){
+        Mobservers[i]->update(lines);
+      }
+    }
+
+    void notifyViewObservers(CTetris* board){
+      for(int i=0; i<nobservers; i++){
+        observers[i]->update(board);
+      }
+    }
+
     Model(string name){
       pname = name;
     }
 
     void update(char key){
+      struct controlBox CB;
+      CB.key = key;
+      CB.iskey = true;
       m.lock();
-      keys.push(key);
+      CBs.push(CB);
+      cv.notify_all();
+      m.unlock();
+    }
+
+    void update(Matrix lines){
+      struct controlBox CB;
+      CB.lines = lines;
+      CB.iskey = false;
+      m.lock();
+      CBs.push(CB);
       cv.notify_all();
       m.unlock();
     }
@@ -240,18 +325,14 @@ class Model{
       keypad = keypad_ex;
     }
 
-    void setwindow(WINDOW *x){
-      n = x;
-    }
-
-    char read(){
+    controlBox read(){
       unique_lock<mutex> lk(m);
       //keys에 key가 들어올때까지 대기, sleep 상태에서는 뮤택스 unlocked
-      if(keys.empty()) cv.wait(lk, [&]{return !keys.empty();});
-      char key = keys.front();
-      keys.pop();
+      if(CBs.empty()) cv.wait(lk, [&]{return !CBs.empty();});
+      struct controlBox CB = CBs.front();
+      CBs.pop();
       lk.unlock();
-      return key;
+      return CB;
     }
   
     void run(){
@@ -262,33 +343,48 @@ class Model{
       srand((unsigned int)time(NULL));
       key = (char)('0' + rand() % MAX_BLK_TYPES);
       state = board->accept(key);
-      drawScreen(board, n);
+      notifyViewObservers(board);
 
       while(isGameDone == false) {
-        key = read();
-        //keypad에 존재하면 keypad 딕셔너리 자료형으로 알맞는 key로
-        //변환한 다음, key에 맞는 동작 수행
-        if(keypad.find(key)!=keypad.end()){
-          key = keypad[key];
-          state = board->accept(key);
-
-          if (state == NewBlock) {
-            key = (char)('0' + rand() % MAX_BLK_TYPES);
+        struct controlBox CB = read();
+        if(CB.iskey==true){
+          key = CB.key;
+          //keypad에 존재하면 keypad 딕셔너리 자료형으로 알맞는 key로
+          //변환한 다음, key에 맞는 동작 수행
+          if(keypad.find(key)!=keypad.end()){
+            key = keypad[key];
             state = board->accept(key);
-            if (state == Finished) {
-              drawScreen(board, n);
+
+            if (state == NewBlock) {
+              key = (char)('0' + rand() % MAX_BLK_TYPES);
+              state = board->accept(key);
+              if (state == Finished) {
+                notifyViewObservers(board);
+                isGameDone = true;
+                break;
+              }
+            }
+            if (state == NewBlockDelR) {
+              printMsg("timetodel");
+              delRect = board->getDelRect();
+              notifyModelObservers(delRect);
+            }
+            notifyViewObservers(board);
+            cout << endl;
+            if(key == 'q'){
               isGameDone = true;
               break;
             }
           }
-          drawScreen(board, n);
-          cout << endl;
-          if(key == 'q'){
-            isGameDone = true;
-            break;
-          }
+        }
+        else{
+          Matrix lines = CB.lines;
+          board->accept(lines);
+          printMsg("getdel");
         }
       }
+      //view가 빠져나올수 있도록 board를 전달해준다
+      notifyViewObservers(board);
       //진사람 출력(먼저 보드가 찬사람)
       if (returnName==false){
         returnName=true;
@@ -420,13 +516,22 @@ int main(int argc, char *argv[]) {
   map<char,char> dic1={{'q','q'},{'w','w'},{'a','a'},{'s','s'},{'d','d'},{' ',' '},{'y','s'}};
   map<char, char> dic2 = {{'u', 'q'}, {'i', 'w'}, {'j', 'a'}, {'k', 's'}, {'l', 'd'}, {'\r', ' '}, {'y', 's'}};
 
+  View th_view1("Viewer 1");
+  th_view1.setwindow(win1);
+
+  View th_view2("Viewer 2");
+  th_view2.setwindow(win2);
+
   Model th_model1("player 1");
   th_model1.setkeypad(dic1);
-  th_model1.setwindow(win1);
+  th_model1.addViewObserver(&th_view1);
 
   Model th_model2("player 2");
   th_model2.setkeypad(dic2);
-  th_model2.setwindow(win2);
+  th_model2.addViewObserver(&th_view2);
+
+  th_model1.addModelObserver(&th_model2);
+  th_model2.addModelObserver(&th_model1);
 
   KeyController th_cont1("keycontrol");
 	th_cont1.addObserver(&th_model1);
@@ -437,55 +542,28 @@ int main(int argc, char *argv[]) {
 	th_cont2.addObserver(&th_model2);
 
   vector<thread> threads;
-  //https://stackoverflow.com/questions/10998780/stdthread-calling-method-of-class
-  //이런 방식을 사용하면 따로 함수를 정의하지 않고 쓰레드로 넣을 수 있다
-  //원하는 클래스의 멤버 함수와 클래스를 넣어주면 된다
+  threads.push_back(thread(&View::run, &th_view1));
+  threads.push_back(thread(&View::run, &th_view2));
   threads.push_back(thread(&Model::run, &th_model1));
   threads.push_back(thread(&Model::run, &th_model2));
   threads.push_back(thread(&KeyController::run, &th_cont1));
   threads.push_back(thread(&TimeController::run, &th_cont2));
+  //https://stackoverflow.com/questions/10998780/stdthread-calling-method-of-class
+  //이런 방식을 사용하면 따로 함수를 정의하지 않고 쓰레드로 넣을 수 있다
+  //원하는 클래스의 멤버 함수와 클래스를 넣어주면 된다
 
-  for(int i = 0; i < 4; i++){
+  for(int i = 0; i < 6; i++){
     threads[i].join();
   }
-  
+
   //진사람 출력(먼저 보드가 찬사람)
   string endMsg = "Program terminated! ";
   endMsg.append(loser);
   endMsg.append(" Lose");
   printMsg(endMsg);
-  
-  //delete board를 이용하여CTetris의 소멸자가 두번 발동되면 지운 주소에
-  //다시 접근하여 에러가 발생함. 따라서 한번만 소멸하도록 수동으로 수행
-  //CTetris::deleteonce();
 
-  //하지만 이러면 소멸자의 의미가 없음 왜 발생하는지 추적해야 함
-  //우선 delete board를 수행할 때 첫번째 수행을 완료하고 두번째 수행에서
-  //세그멘테이션 오류가 뜨게 됨. 이 오류는 잘못된 주소를 참조한 것이기 때문에 발생한다.
-  //우선 삭제된 곳에 다시 접근했다고 가정하고 저번에도 문제를 풀었다.
-
-  //그렇다면 왜 삭제된 곳에 접근했는지가 의문이다.
-  //우선 setofcblockobject의 포인터를 출력해보았더니 모델 두구간이 같은 주소를 가리키고 있다.
-  //이말은 우리가 setofcblockobject를 두번 삭제할 경우에 에러가 발생하는것은 당연하다는 것이다.
-
-  //우선 board의 포인터를 출력해보았더니 모델 두구간이 다른 주소를 가리키고 있다.
-  //이는 class가 따로 생성되지 않았다는 뜻이다. 따라서 board만 두번 지웠을 경우에도 에러가 발생한다.
-
-  //왜 setofcblockobject를 주석 처리함에도 우리가 동적할당한 new board가 두번 삭제될때 에러가 발생할까
-  //그것은 CTetris가 tetris를 상속받았기 때문에 CTetris의 소멸자가 발생할 때 Tetris의 소멸자까지 발생하기 때문에
-  //Tetris의 setofblockobject도 주석 처리해야 한다는 것이다.
-
-  //그렇다면 왜 setofblockobject의 주소값이 같을까? 혹시 static 정적 변수이기 때문인가?
-  //그렇다면 한번만 삭제되어야 하는가?
-
-  //한번만 삭제되어야하는 이유는 static이다. static은 같은 주소를 가지고 있다.
-  //삭제를 하지 않는 것이 최선일 때도 있고, asexit으로 명시적으로 해제하는
-  //방법을 쓸수도 있다고 한다.
-
-  //https://stackoverflow.com/questions/2429408/c-freeing-static-variables
-  
-  //CTetris::deletestatic();
   sleep(5);
   endwin();
+  //static 변수는 같은 주소 공유, 한번만 삭제 or 삭제X!
   atexit(CTetris::deletestatic);
 }
