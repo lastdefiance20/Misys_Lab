@@ -125,18 +125,7 @@ TetrisState Tetris::accept(char key){
         if (justStarted == false){
             deleteFullLines();
         }
-        iScreen = Matrix(oScreen);
         //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
-        while(!delRects.empty()){
-            Matrix delRect = delRects.top();
-            delRects.pop();
-            bool notcrash = addDeleteLines(delRect);
-            if(notcrash==false){
-                iScreen = Matrix(oScreen);
-                state = TetrisState(Finished);
-                return state;
-            }
-        }
         iScreen = Matrix(oScreen);
         idxBlockType = keynum;
         //cout<<idxBlockType<<endl;
@@ -249,9 +238,17 @@ int Tetris::checkDeleteLines(){
 
 //delRect를 받아 board 밑에 추가가 가능하다면 추가한 후 true를 반환하며, 불가능하다면 false를 반환한다.
 bool Tetris::addDeleteLines(Matrix delRect){
+    oScreen = Matrix(iScreen);
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
     int checked = 0;
+
+    for(int y = 0; y<delRectdy; y++){
+        if(top != 0){
+            top--;
+        }
+    }
+
     for(int y = 1; y<=delRectdy; y++){
         Matrix line = oScreen.clip(y-1, 0, y, iScreenDw*2+iScreenDx);
         
@@ -268,6 +265,7 @@ bool Tetris::addDeleteLines(Matrix delRect){
         
         oScreen.paste(&tempScreen,0,0);
         oScreen.paste(&delRectNormal,y-delRectdy,0);
+        iScreen = Matrix(oScreen);
         return true;
     }
 }

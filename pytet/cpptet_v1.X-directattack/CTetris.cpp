@@ -37,12 +37,6 @@ TetrisState CTetris::accept(char key){
         }
         iCScreen = Matrix(oCScreen);
         //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
-        while(!delRects.empty()){
-            Matrix delRect = delRects.top();
-            delRects.pop();
-            bool notcrash = addDeleteLines(delRect);
-        }
-        iCScreen = Matrix(oCScreen);
     }
 
     state = Tetris::accept(key);
@@ -59,8 +53,17 @@ TetrisState CTetris::accept(char key){
 };
 
 //지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
-TetrisState CTetris::accept(Matrix deletedLines){
-    delRects.push(deletedLines);
+TetrisState CTetris::accept(Matrix delRect){
+    state = TetrisState(Running);
+
+    bool notcrash = addDeleteLines(delRect);
+    Tetris::addDeleteLines(delRect);
+    iCScreen = Matrix(oCScreen);
+    iScreen = Matrix(oScreen);
+    if(notcrash==false){
+        state = TetrisState(Finished);
+    }
+    return state;
 }
 
 void CTetris::deleteFullLines(){
@@ -125,6 +128,9 @@ Matrix CTetris::getDelRect(){
 
 //delRect를 받아 board 밑에 추가가 가능하다면 추가한 후 true를 반환하며, 불가능하다면 false를 반환한다.
 bool CTetris::addDeleteLines(Matrix delRect){
+    oCScreen = Matrix(iCScreen);
+    oScreen = Matrix(iScreen);
+
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
     noDeleteLine += delRectdy;
@@ -149,6 +155,8 @@ bool CTetris::addDeleteLines(Matrix delRect){
         oScreen.paste(&delRectNormal,y-delRectdy,0);
         oCScreen.paste(&CtempScreen,0,0);
         oCScreen.paste(&delRect,y-delRectdy,0);
+        iCScreen = Matrix(oCScreen);
+        iScreen = Matrix(oScreen);
         return true;
     }
 }

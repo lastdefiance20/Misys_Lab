@@ -404,7 +404,7 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
             }
             //NewBlockDelR = 줄을 지워서 temp에 저장했을때
             if (state == NewBlockDelR) {
-              //printMsg("timetodel");
+              printMsg("timetodel");
               //지운 줄을 가져오고 notify한다.
               delRect = board->getDelRect();
               notifyObservers(delRect);
@@ -419,8 +419,8 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
         }
         else{
           Matrix lines = CB.lines;
-          board->accept(lines);
-          //printMsg("getdel");
+          state = board->accept(lines);
+          printMsg("getdel");
         }
       }
       //view가 빠져나올수 있도록 board를 전달해준다
