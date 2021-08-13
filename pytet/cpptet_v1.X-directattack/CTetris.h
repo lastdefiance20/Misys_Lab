@@ -14,12 +14,11 @@ public:
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
     static void deletestatic();
     CTetris(int iScreenDyy, int iScreenDxx);
-    TetrisState accept(char key);
-    TetrisState accept(Matrix deletedLines);
+    TetrisState accept(keyBox CB);
     void deleteFullLines();
     int checkDeleteLines();
     Matrix getDelRect();
-    bool addDeleteLines(Matrix delRect);
+    void addDeleteLines(Matrix delRect);
     ~CTetris();
 };
 }

@@ -26,7 +26,29 @@ CTetris::CTetris(int iScreenDyy, int iScreenDxx):Tetris(iScreenDyy, iScreenDxx){
     oCScreen = Matrix(iCScreen);
 };
 
-TetrisState CTetris::accept(char key){
+TetrisState CTetris::accept(keyBox CB){
+    if(CB.iskey==false){
+        //지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
+        Matrix delRect = CB.lines;
+        state = TetrisState(Running);
+        bool isable;
+
+        //delRect 추가
+        Tetris::addDeleteLines(delRect);
+        addDeleteLines(delRect);
+        iCScreen = Matrix(oCScreen);
+        iScreen = Matrix(oScreen);
+
+        isable = Tetris::checkBlock(delRect);
+
+        if(isable == false){
+            state = TetrisState(Finished);
+            return state;
+        }
+        CB.key = 'v';
+    }
+
+    char key = CB.key;
     Matrix tempBlk;
     int keynum = key - '0';
 
@@ -52,20 +74,6 @@ TetrisState CTetris::accept(char key){
     return state;
 };
 
-//지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
-TetrisState CTetris::accept(Matrix delRect){
-    state = TetrisState(Running);
-
-    bool notcrash = addDeleteLines(delRect);
-    Tetris::addDeleteLines(delRect);
-    iCScreen = Matrix(oCScreen);
-    iScreen = Matrix(oScreen);
-    if(notcrash==false){
-        state = TetrisState(Finished);
-    }
-    return state;
-}
-
 void CTetris::deleteFullLines(){
     //iscreenDy = screen y num
     //iscreenDx = screen x num
@@ -89,7 +97,7 @@ void CTetris::deleteFullLines(){
     }
 };
 
-//지울 line이 있는지 확인한다. 찾으면 temp에 저장하고 true를 반환하며 아니면 false를 반환한다.
+//지울 line이 있는지 확인한다. 찾으면 temp에 저장한다.
 int CTetris::checkDeleteLines(){
     int checked = 0;
     int rtchecked = 0;
@@ -126,39 +134,29 @@ Matrix CTetris::getDelRect(){
     return tempCDeleteLine;
 }
 
-//delRect를 받아 board 밑에 추가가 가능하다면 추가한 후 true를 반환하며, 불가능하다면 false를 반환한다.
-bool CTetris::addDeleteLines(Matrix delRect){
+//delRect를 받아 board 추가한다.
+void CTetris::addDeleteLines(Matrix delRect){
     oCScreen = Matrix(iCScreen);
-    oScreen = Matrix(iScreen);
+    //oScreen = Matrix(iScreen);
 
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
     noDeleteLine += delRectdy;
-    int checked = 0;
-    for(int y = 1; y<=delRectdy; y++){
-        Matrix line = oScreen.clip(y-1, 0, y, iScreenDw*2+iScreenDx);
-        
-        if(line.sum()!=(iScreenDw*2)){
-            checked++;
-        }
-    }
 
-    if(checked>0) return false;
-    else{
-        int y = iScreenDy;
-        Matrix delRectNormal(delRectdy, delRectdx, 1);
+    int y = iScreenDy;
+    Matrix delRectNormal(delRectdy, delRectdx, 1);
 
-        Matrix tempScreen = oScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
-        Matrix CtempScreen = oCScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
-        
-        oScreen.paste(&tempScreen,0,0);
-        oScreen.paste(&delRectNormal,y-delRectdy,0);
-        oCScreen.paste(&CtempScreen,0,0);
-        oCScreen.paste(&delRect,y-delRectdy,0);
-        iCScreen = Matrix(oCScreen);
-        iScreen = Matrix(oScreen);
-        return true;
-    }
+    //Matrix tempScreen = oScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
+    Matrix CtempScreen = oCScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
+    
+    //oScreen.paste(&tempScreen,0,0);
+    //oScreen.paste(&delRectNormal,y-delRectdy,0);
+
+    oCScreen.paste(&CtempScreen,0,0);
+    oCScreen.paste(&delRect,y-delRectdy,0);
+
+    iCScreen = Matrix(oCScreen);
+    //iScreen = Matrix(oScreen);
 }
 
 CTetris::~CTetris(){

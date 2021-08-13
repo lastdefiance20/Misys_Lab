@@ -237,37 +237,62 @@ int Tetris::checkDeleteLines(){
 }
 
 //delRect를 받아 board 밑에 추가가 가능하다면 추가한 후 true를 반환하며, 불가능하다면 false를 반환한다.
-bool Tetris::addDeleteLines(Matrix delRect){
-    oScreen = Matrix(iScreen);
+void Tetris::addDeleteLines(Matrix delRect){
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
     int checked = 0;
+    if(top != 0){
+        top--;
+    }
 
-    for(int y = 0; y<delRectdy; y++){
-        if(top != 0){
-            top--;
+    oScreen = Matrix(iScreen);
+
+    int y = iScreenDy;
+    Matrix delRectNormal(delRectdy, delRectdx, 1);
+
+    Matrix tempScreen = oScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
+    
+    oScreen.paste(&tempScreen,0,0);
+    oScreen.paste(&delRectNormal,y-delRectdy,0);
+    iScreen = Matrix(oScreen);
+}
+
+bool Tetris::checkBlock(Matrix delRect){
+    Matrix tempBlk;
+    int delRectdy = delRect.get_dy();
+
+    tempBlk = iScreen.clip(top, left, top+currBlk.get_dy(), left+currBlk.get_dx());
+    tempBlk = tempBlk.add(&currBlk);
+
+    if(tempBlk.anyGreaterThan(1) == true){
+        for(int y = 1; y<=delRectdy; y++){
+            if(top != 0){
+                top--;
+            }
+            else{
+                break;
+            }
         }
-    }
 
-    for(int y = 1; y<=delRectdy; y++){
-        Matrix line = oScreen.clip(y-1, 0, y, iScreenDw*2+iScreenDx);
-        
-        if(line.sum()!=(0)){
-            checked++;
+        tempBlk = iScreen.clip(top, left, top+currBlk.get_dy(), left+currBlk.get_dx());
+        tempBlk = tempBlk.add(&currBlk);
+    
+        if(tempBlk.anyGreaterThan(1) == true){
+            return false;
         }
-    }
-    if(checked>0) return false;
-    else{
-        int y = iScreenDy;
-        Matrix delRectNormal(delRectdy, delRectdx, 1);
 
-        Matrix tempScreen = oScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
-        
-        oScreen.paste(&tempScreen,0,0);
-        oScreen.paste(&delRectNormal,y-delRectdy,0);
-        iScreen = Matrix(oScreen);
-        return true;
+        while (1){
+            if (tempBlk.anyGreaterThan(1) != false)
+                break;
+            top += 1;
+            tempBlk = iScreen.clip(top, left, top+currBlk.get_dy(), left+currBlk.get_dx());
+            tempBlk = tempBlk.add(&currBlk);
+        }
+
+        top--;
     }
+
+    return true;
 }
 
 Tetris::~Tetris(){

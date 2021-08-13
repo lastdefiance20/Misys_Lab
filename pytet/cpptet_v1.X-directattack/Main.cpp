@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <vector>
+#include <list>
 
 #include <locale.h>
 #include <ncursesw/curses.h>
@@ -165,14 +166,6 @@ int *setOfCBlockArrays[] = {
   T6D0, T6D1, T6D2, T6D3,
 };
 
-//key와 lines, 무엇이 들어있는지 알기 위한 bool값으로 이루어진 struct.
-//return을 하기 위해 포장한다.
-struct controlBox{
-  char key;
-  Matrix lines;
-  bool iskey;
-};
-
 //drawScreen에서 refresh가 겹치면 window가 깨지는 현상 발생
 //drawm 뮤택스로 동시에 window refresh 방지
 mutex drawm;
@@ -296,9 +289,10 @@ class View: public OutScreenObserver{
     }
 };
 
-class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPublisher{
+class Model: public KeyObserver, OutScreenPublisher, 
+DelRectObserver, DelRectPublisher{
   public:
-    queue<controlBox> CBs;
+    list<keyBox> CBs;
     map<char, char> keypad;
     mutex m; //keys에 동시접근을 막기 위한 뮤택스
     condition_variable cv; //keys에 key가 들어옴을 알리기 위한 CV
@@ -339,22 +333,22 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
 
     //key를 update할 경우
     virtual void update(char key){
-      struct controlBox CB;
+      struct keyBox CB;
       CB.key = key;
       CB.iskey = true;
       m.lock();
-      CBs.push(CB);
+      CBs.push_back(CB);
       cv.notify_all();
       m.unlock();
     }
 
     //지운 line을 update할 경우
     virtual void update(Matrix lines){
-      struct controlBox CB;
+      struct keyBox CB;
       CB.lines = lines;
       CB.iskey = false;
       m.lock();
-      CBs.push(CB);
+      CBs.push_front(CB);
       cv.notify_all();
       m.unlock();
     }
@@ -363,12 +357,12 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
       keypad = keypad_ex;
     }
 
-    controlBox read(){
+    keyBox read(){
       unique_lock<mutex> lk(m);
       //keys에 key가 들어올때까지 대기, sleep 상태에서는 뮤택스 unlocked
       if(CBs.empty()) cv.wait(lk, [&]{return !CBs.empty();});
-      struct controlBox CB = CBs.front();
-      CBs.pop();
+      struct keyBox CB = CBs.front();
+      CBs.pop_front();
       lk.unlock();
       return CB;
     }
@@ -377,37 +371,39 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
       CTetris *board = new CTetris(ddy, ddx);
       TetrisState state;
       char key;
+      struct keyBox CB;
 
       srand((unsigned int)time(NULL));
       key = (char)('0' + rand() % MAX_BLK_TYPES);
-      state = board->accept(key);
+      CB.iskey = true;
+      CB.key = key;
+      state = board->accept(CB);
       notifyObservers(board);
-
+      
       while(isGameDone == false) {
-        struct controlBox CB = read();
+        //NewBlockDelR = 줄을 지워서 temp에 저장했을때
+        if (state == NewBlockDelR) {
+          //printMsg("timetodel");
+          delRect = board->getDelRect();
+          notifyObservers(delRect);
+          state = Running;
+        }
+        struct keyBox CB = read();
         if(CB.iskey==true){
           key = CB.key;
-          //keypad에 존재하면 keypad 딕셔너리 자료형으로 알맞는 key로
-          //변환한 다음, key에 맞는 동작 수행
+          //keypad에 존재하면 딕셔너리를 이용해 알맞는 key로 변환
           if(keypad.find(key)!=keypad.end()){
-            key = keypad[key];
-            state = board->accept(key);
+            CB.key = keypad[key];
+            state = board->accept(CB);
 
             if (state == NewBlock) {
-              key = (char)('0' + rand() % MAX_BLK_TYPES);
-              state = board->accept(key);
+              CB.key = (char)('0' + rand() % MAX_BLK_TYPES);
+              state = board->accept(CB);
               if (state == Finished) {
                 notifyObservers(board);
                 isGameDone = true;
                 break;
               }
-            }
-            //NewBlockDelR = 줄을 지워서 temp에 저장했을때
-            if (state == NewBlockDelR) {
-              printMsg("timetodel");
-              //지운 줄을 가져오고 notify한다.
-              delRect = board->getDelRect();
-              notifyObservers(delRect);
             }
             notifyObservers(board);
             cout << endl;
@@ -418,9 +414,9 @@ class Model: public KeyObserver, OutScreenPublisher, DelRectObserver, DelRectPub
           }
         }
         else{
-          Matrix lines = CB.lines;
-          state = board->accept(lines);
-          printMsg("getdel");
+          state = board->accept(CB);
+          notifyObservers(board);
+          //printMsg("getdel");
         }
       }
       //view가 빠져나올수 있도록 board를 전달해준다
