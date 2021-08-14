@@ -382,12 +382,6 @@ DelRectObserver, DelRectPublisher{
       
       while(isGameDone == false) {
         //NewBlockDelR = 줄을 지워서 temp에 저장했을때
-        if (state == NewBlockDelR) {
-          //printMsg("timetodel");
-          delRect = board->getDelRect();
-          notifyObservers(delRect);
-          state = Running;
-        }
         struct keyBox CB = read();
         if(CB.iskey==true){
           key = CB.key;
@@ -395,7 +389,6 @@ DelRectObserver, DelRectPublisher{
           if(keypad.find(key)!=keypad.end()){
             CB.key = keypad[key];
             state = board->accept(CB);
-
             if (state == NewBlock) {
               CB.key = (char)('0' + rand() % MAX_BLK_TYPES);
               state = board->accept(CB);
@@ -404,6 +397,12 @@ DelRectObserver, DelRectPublisher{
                 isGameDone = true;
                 break;
               }
+            }
+            if (state == NewBlockDelR) {
+              printMsg("timetodel");
+              delRect = board->getDelRect();
+              notifyObservers(delRect);
+              state = Running;
             }
             notifyObservers(board);
             cout << endl;
@@ -416,7 +415,7 @@ DelRectObserver, DelRectPublisher{
         else{
           state = board->accept(CB);
           notifyObservers(board);
-          //printMsg("getdel");
+          printMsg("getdel");
         }
       }
       //view가 빠져나올수 있도록 board를 전달해준다

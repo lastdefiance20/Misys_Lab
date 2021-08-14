@@ -127,8 +127,8 @@ TetrisState Tetris::accept(keyBox CB){
 
         if(isable == false){
             state = TetrisState(Finished);
-            return state;
         }
+        return state;
     }
 
     char key = CB.key;
@@ -155,6 +155,11 @@ TetrisState Tetris::accept(keyBox CB){
         if (tempBlk.anyGreaterThan(1)) state = TetrisState(Finished);
         oScreen = Matrix(iScreen);
         oScreen.paste(&tempBlk, top, left);
+        //지워진 줄이 있으면(observer에게 notify시켜야함)
+        if(checkdel>0){
+            state = TetrisState(NewBlockDelR);
+            checkdel = 0;
+        }
         return state;
     }
     else if (key == 'q') cout<<"q"<<endl;
@@ -255,9 +260,6 @@ void Tetris::addDeleteLines(Matrix delRect){
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
     int checked = 0;
-    if(top != 0){
-        top--;
-    }
 
     oScreen = Matrix(iScreen);
 
