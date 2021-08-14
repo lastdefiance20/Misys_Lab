@@ -601,5 +601,4 @@ int main(int argc, char *argv[]) {
   sleep(5);
   endwin();
   //static 변수는 같은 주소 공유, 한번만 삭제 or 삭제X!
-  atexit(CTetris::deletestatic);
 }

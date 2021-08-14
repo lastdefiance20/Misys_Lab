@@ -6,13 +6,14 @@ extern "C"{
 class CTetris : public Tetris {
 public:
     static Matrix *setOfCBlockObjects;
+    static int num_allocated_Cobjects;
+
     Matrix iCScreen;
     Matrix oCScreen;
     Matrix currCBlk;
     Matrix tempCDeleteLine;
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
-    static void deletestatic();
     CTetris(int iScreenDyy, int iScreenDxx);
     TetrisState accept(keyBox CB);
     void deleteFullLines();

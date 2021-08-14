@@ -6,6 +6,7 @@ int Tetris::iScreenDw=0;
 Matrix* Tetris::setOfBlockObjects;
 int Tetris::nBlockTypes=0;
 int Tetris::nBlockDegrees=0;
+int Tetris::num_allocated_objects=0;
 
 void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
     nBlockTypes = MAX_BLK_TYPES;
@@ -69,11 +70,6 @@ void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES
     iScreenDw = arrayBlk_maxsize;
 };
 
-void Tetris::deletestatic(){
-    delete [] setOfBlockObjects;
-    //cout<<"deleted Tetris"<<endl;
-};
-
 Matrix Tetris::createArrayscreen(){
     arrayScreenDx = iScreenDw*2 + iScreenDx;
     arrayScreenDy = iScreenDy + iScreenDw;
@@ -113,11 +109,29 @@ Tetris::Tetris(int iScreenDyy, int iScreenDxx){
     iScreen = Matrix(arrayScreen);
     oScreen = Matrix(iScreen);
     justStarted = true;
+    num_allocated_objects += 1;
 };
 
-TetrisState Tetris::accept(char key){
+TetrisState Tetris::accept(keyBox CB){
     state = TetrisState(Running);
     Matrix tempBlk;
+
+    if(CB.iskey==false){
+        Matrix delRect = CB.lines;
+        bool isable;
+
+        addDeleteLines(delRect);
+        iScreen = Matrix(oScreen);
+
+        isable = checkBlock(delRect);
+
+        if(isable == false){
+            state = TetrisState(Finished);
+            return state;
+        }
+    }
+
+    char key = CB.key;
 
     int keynum = key - '0';
 
@@ -296,4 +310,9 @@ bool Tetris::checkBlock(Matrix delRect){
 }
 
 Tetris::~Tetris(){
+    num_allocated_objects -= 1;
+    if(num_allocated_objects == 0){
+        delete [] setOfBlockObjects;
+        //cout<<"deleted Tetris"<<endl;
+    }
 };

@@ -1,6 +1,7 @@
 #include "CTetris.h"
 
 Matrix* CTetris::setOfCBlockObjects;
+int CTetris::num_allocated_Cobjects=0;
 
 void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
     Tetris::init(setOfBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
@@ -14,37 +15,22 @@ void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREE
     }
 };
 
-void CTetris::deletestatic(){
-    delete [] setOfCBlockObjects;
-    //cout<<"deleted Tetris C"<<endl;
-    Tetris::deletestatic();
-};
-
 CTetris::CTetris(int iScreenDyy, int iScreenDxx):Tetris(iScreenDyy, iScreenDxx){
     arrayScreen = createArrayscreen();
     iCScreen = Matrix(arrayScreen);
     oCScreen = Matrix(iCScreen);
+    num_allocated_Cobjects += 1;
 };
 
 TetrisState CTetris::accept(keyBox CB){
     if(CB.iskey==false){
         //지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
         Matrix delRect = CB.lines;
-        state = TetrisState(Running);
         bool isable;
 
         //delRect 추가
-        Tetris::addDeleteLines(delRect);
         addDeleteLines(delRect);
         iCScreen = Matrix(oCScreen);
-        iScreen = Matrix(oScreen);
-
-        isable = Tetris::checkBlock(delRect);
-
-        if(isable == false){
-            state = TetrisState(Finished);
-            return state;
-        }
         CB.key = 'v';
     }
 
@@ -61,7 +47,7 @@ TetrisState CTetris::accept(keyBox CB){
         //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
     }
 
-    state = Tetris::accept(key);
+    state = Tetris::accept(CB);
 
     currCBlk = setOfCBlockObjects[idxBlockType*nBlockDegrees + idxBlockDegree];
 
@@ -160,4 +146,9 @@ void CTetris::addDeleteLines(Matrix delRect){
 }
 
 CTetris::~CTetris(){
+    num_allocated_Cobjects -= 1;
+    if(num_allocated_Cobjects == 0){
+        delete [] setOfCBlockObjects;
+        //cout<<"deleted Tetris"<<endl;
+    }
 };

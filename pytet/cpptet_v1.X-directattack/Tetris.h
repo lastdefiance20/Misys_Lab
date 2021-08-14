@@ -25,6 +25,7 @@ public:
     static int nBlockDegrees;
     static Matrix *setOfBlockObjects;
     static int iScreenDw;
+    static int num_allocated_objects;
     int iScreenDy;
     int iScreenDx;
     int idxBlockDegree;
@@ -45,10 +46,9 @@ public:
     Matrix tempDeleteLine;
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
-    static void deletestatic();
     Matrix createArrayscreen();
     Tetris(int iScreenDyy, int iScreenDxx);
-    TetrisState accept(char key);
+    TetrisState accept(keyBox CB);
     int deleteFullLines();
     int checkDeleteLines();
     void addDeleteLines(Matrix delRect);
