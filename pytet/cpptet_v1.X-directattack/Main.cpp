@@ -399,7 +399,7 @@ DelRectObserver, DelRectPublisher{
               }
             }
             if (state == NewBlockDelR) {
-              printMsg("timetodel");
+              //printMsg("timetodel");
               delRect = board->getDelRect();
               notifyObservers(delRect);
               state = Running;
@@ -415,7 +415,7 @@ DelRectObserver, DelRectPublisher{
         else{
           state = board->accept(CB);
           notifyObservers(board);
-          printMsg("getdel");
+          //printMsg("getdel");
         }
       }
       //view가 빠져나올수 있도록 board를 전달해준다
