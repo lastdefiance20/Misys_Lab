@@ -23,6 +23,11 @@
 
 #include <CTetris.h>
 
+#include <string.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
 using namespace std;
 
 /**************************************************************/

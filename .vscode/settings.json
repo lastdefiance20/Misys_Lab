@@ -17,6 +17,7 @@
         "iostream": "cpp",
         "xlocale": "cpp",
         "memory": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "ostream": "cpp"
     }
 }
