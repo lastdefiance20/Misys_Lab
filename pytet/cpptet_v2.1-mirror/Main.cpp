@@ -28,15 +28,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-//ex
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdint.h>
-#include <string.h>
-#include <fcntl.h>
-#include <linux/input.h>
-
 using namespace std;
 
 /**************************************************************/
