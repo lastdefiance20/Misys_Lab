@@ -1,0 +1,34 @@
+#include <SendController.h>
+
+void SendController::addclient(int sock){
+    sock_client = sock;
+}
+
+void SendController::update(char key){
+    m.lock();
+    keys.push(key);
+    cv.notify_all();
+    m.unlock();
+}
+
+char SendController::read(){
+    unique_lock<mutex> lk(m);
+    if(keys.empty()) cv.wait(lk, [&]{return !keys.empty();});
+    char key = keys.front();
+    keys.pop();
+    lk.unlock();
+    return key;
+}
+
+void SendController::run(){
+    while(isGameDone == false){
+        char key = read();// 쓰기 버퍼에 문자열 입력
+        char w_buff[256];
+        w_buff[0] = key;
+        int write_chk = write(sock_client, w_buff, strlen(w_buff)); // 작성 길이만큼 write(전송)
+        if(write_chk == -1){
+            //printMsg("write error");
+            break;
+        }
+    }
+}
