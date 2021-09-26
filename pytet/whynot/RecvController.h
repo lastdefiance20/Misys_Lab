@@ -25,11 +25,6 @@ class RecvController: public KeyPublisher{
     int sock_client;
     bool isServerRecv;
 
-    WINDOW *prwin;
-    string pname;
-
-    RecvController(string name, WINDOW *win);
-    
     void addclient(int sock);
 
     virtual void addObserver(Model* observer);

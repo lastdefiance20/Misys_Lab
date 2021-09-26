@@ -2,11 +2,6 @@
 #include <Model.h>
 #include <SendController.h>
 
-RecvController::RecvController(string name, WINDOW *win){
-    pname = name;
-    prwin = win;
-};
-
 void RecvController::addclient(int sock){
     sock_client = sock;
 }
@@ -59,9 +54,5 @@ void RecvController::run(){
             }
         }
     }
-
-    string breaked = " breaked\n";
-    pname.append(breaked);
-    printMsg(pname, prwin);
     //notifyObservers('q');
 }

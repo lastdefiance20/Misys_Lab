@@ -356,11 +356,11 @@ int main(int argc, char *argv[]) {
   th_model1.addObserver(&th_model2);
   th_model2.addObserver(&th_model1);
 
-  RecvController th_recv("Recv 1", win0);
+  RecvController th_recv;
   th_recv.addObserver(&th_model2);
   th_recv.addclient(sock_client);
 
-  SendController th_send("Send 1", win0);
+  SendController th_send;
   th_send.addclient(sock_client);
   th_send.setmain();
 
@@ -389,10 +389,6 @@ int main(int argc, char *argv[]) {
   for(int i = 0; i < 8; i++){
     threads[i].join();
   }
-  
-  wclear(win0);
-
-  wrefresh(win0);
 
   //진사람 출력(먼저 보드가 찬사람)
   string endMsg = "Program terminated! ";

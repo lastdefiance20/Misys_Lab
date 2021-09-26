@@ -26,9 +26,7 @@ void View::run(){
         lk.unlock();
         drawScreen(board, n);
     }
-    /*
     string breaked = " breaked\n";
     vname.append(breaked);
     printMsg(vname, prwin);
-    */
 };

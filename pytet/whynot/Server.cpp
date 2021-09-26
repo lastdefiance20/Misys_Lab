@@ -219,21 +219,21 @@ int main(int argc, char *argv[]){
         th_model1.addObserver(&th_model2);
         th_model2.addObserver(&th_model1);
 
-        RecvController th_recv1("Recv 1", win0);
+        RecvController th_recv1;
         th_recv1.addObserver(&th_model1);
         th_recv1.addclient(sock_client1);
         th_recv1.setserver();
 
-        RecvController th_recv2("Recv 2", win0);
+        RecvController th_recv2;
         th_recv2.addObserver(&th_model2);
         th_recv2.addclient(sock_client2);
         th_recv2.setserver();
 
-        SendController th_send1("Send 1", win0);
+        SendController th_send1;
         th_send1.addclient(sock_client1);
         th_send1.setserver();
         
-        SendController th_send2("Send 2", win0);
+        SendController th_send2;
         th_send2.addclient(sock_client2);
         th_send2.setserver();
 

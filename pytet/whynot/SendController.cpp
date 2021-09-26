@@ -1,10 +1,5 @@
 #include <SendController.h>
 
-SendController::SendController(string name, WINDOW *win){
-    pname = name;
-    prwin = win;
-};
-
 void SendController::addclient(int sock){
     sock_client = sock;
 }
@@ -55,20 +50,12 @@ void SendController::run(){
             }
         }
 
-        if(key == '|'){
-            break;
-        }
-
         int write_chk = write(sock_client, w_buff, strlen(w_buff)); // 작성 길이만큼 write(전송)
         if(write_chk == -1){
             //printMsg("write error");
             break;
         }
     }
-
-    string breaked = " breaked\n";
-    pname.append(breaked);
-    printMsg(pname, prwin);
 
     /*
     if(isServerSender == true){

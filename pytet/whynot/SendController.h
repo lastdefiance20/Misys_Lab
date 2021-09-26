@@ -20,11 +20,6 @@ class SendController: public KeyObserver{
     int sock_client;
     bool isServerSender = false;
 
-    WINDOW *prwin;
-    string pname;
-
-    SendController(string name, WINDOW *win);
-
     void addclient(int sock);
 
     virtual void update(char key);

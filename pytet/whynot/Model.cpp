@@ -174,8 +174,7 @@ void Model::run(){
                         }
                         else if (isMainModel == true){
                             notifyObservers('q');
-                            notifyObservers('|');
-                            break;
+                            isGameDone = true;
                             //1, 2 승인지 패인지 판정을 받아와야 할듯
                         }
                         else{
@@ -255,7 +254,6 @@ void Model::run(){
     }
     //view가 빠져나올수 있도록 board를 전달해준다
     notifyObservers(board);
-    //send가 빠져나옴
 
     if (isReferee == true){
         if (returnName==true){
