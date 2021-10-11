@@ -191,10 +191,10 @@ void Model::run(){
                                     else if(key == '2'){
                                         returnName = false;
                                     }
+                                    isGameDone = true;
                                     break;
                                 }
                             }
-                            isGameDone = true;
                         }
                         break;
                     }
@@ -243,6 +243,7 @@ void Model::run(){
                         }
                         isGameDone = true;
                     }
+                    isGameDone = true;
                     break;
                 }
             }
@@ -264,10 +265,17 @@ void Model::run(){
         }
     }
 
-    cout<<"endd";
+    //cout<<"endd";
 
     string breaked = " breaked\n";
     pname.append(breaked);
+
+    /*
+    if(isGameDone == true){
+        string brea = " isgamedone true\n";
+        pname.append(brea);
+    }
+    */
     printMsg(pname, prwin);
 
     //cout<<board->currCBlk<<endl;
