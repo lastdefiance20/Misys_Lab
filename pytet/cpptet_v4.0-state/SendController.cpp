@@ -57,8 +57,8 @@ void SendController::run(){
                 w_buff[1] = key2;
                 int write_chk = write(sock_client2, w_buff, strlen(w_buff));
             }
-            else if((key2 == '=')&&(isServerSender == true)) break;
-
+            else if(key2 == '=') break;
+            
             while(true){
                 key = read();// 쓰기 버퍼에 문자열 입력
                 char w_buff[256];

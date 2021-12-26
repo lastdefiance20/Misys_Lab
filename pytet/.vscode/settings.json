@@ -3,6 +3,10 @@
         "iostream": "cpp",
         "xstring": "cpp",
         "mutex": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "istream": "cpp",
+        "list": "cpp",
+        "iosfwd": "cpp",
+        "map": "cpp"
     }
 }
