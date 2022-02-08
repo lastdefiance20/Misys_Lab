@@ -69,7 +69,7 @@ DelRectObserver, DelRectPublisher{
 
     keyBox swap();
   
-    void terminating();
+    void terminating();//s
     void receivingM();
     void receivingQ();
     void responding();

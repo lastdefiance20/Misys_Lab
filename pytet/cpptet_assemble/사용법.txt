@@ -1,0 +1,19 @@
+정재윤 server 사용법
+jaeyoon_server로 들어가 make로 Main.exe와 Server.exe를 생성한다
+
+실행방법 ./Server.exe 1234
+
+
+정재윤 client 사용법
+jaeyoon_server로 들어가 실행한다
+
+실행방법 ./Main.exe 20 15 127.0.0.1 1234
+
+
+김성연 client 사용법
+seongyon_client로 들어가 make로 Main.exe를 생성한다.
+
+실행방법 ./Main.exe 127.0.0.1 1234
+
+
+성연이 client와 호환하기 위해서 테트리스 가로 크기가 넓어졌습니다.
