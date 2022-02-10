@@ -15,7 +15,7 @@ public:
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
     CTetris(int Dy, int Dx);
-    TetrisState accept(Msg *msg);
+    Msg accept(Msg *msg);
     void deleteFullLines();
     int checkDeleteLines();
     Matrix getDelRect();

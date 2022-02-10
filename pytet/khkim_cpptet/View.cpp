@@ -29,6 +29,7 @@ void View::handle(Msg *msg)
   }
 
   mwin->refresh();
+  delete m;
 }
 
 

@@ -10,6 +10,7 @@
 #include "KbdCtrl.h"
 
 #include "CTetris.h"
+#include "ThreadCtrl.h"
 
 /**************************************************************/
 /**************** Tetris Blocks Definitions *******************/
@@ -140,10 +141,19 @@ int main(int argc, char *argv[])
   KbdCtrl *kbd_ctrl = new KbdCtrl(&bttm_win, "kbd_ctrl");
   sub_list.push_back(kbd_ctrl);
 
+  //control thread
+  ThreadCtrl *thread_ctrl = new ThreadCtrl(&bttm_win, "thread_ctrl");
+  sub_list.push_back(thread_ctrl);
+  thread_ctrl->addSubs(left_model);
+  thread_ctrl->addSubs(time_ctrl);
+  thread_ctrl->addSubs(kbd_ctrl);
+
   // connect tasks to compose the graph
   left_model->addSubs(left_view);
   time_ctrl->addSubs(left_model);
   kbd_ctrl->addSubs(left_model);
+
+  left_model->addSubs(thread_ctrl); //add
 
   // run a thread for each task
   task = new thread(&View::run, left_view);
@@ -154,16 +164,21 @@ int main(int argc, char *argv[])
   task_list.push_back(task);
   task = new thread(&KbdCtrl::run, kbd_ctrl);
   task_list.push_back(task);
+  
+  task = new thread(&ThreadCtrl::run, thread_ctrl);
+  task_list.push_back(task); //add
 
   // message flow begins.
   //model->update(&msg3);
 
+  /*
   // message flow ends.
-  sleep(10);
+  sleep(10); // -> tetris game
 
    // send a self-terminating msg to each task
   for (int i=0; i < sub_list.size(); i++) 
 	  sub_list[i]->update(&msg_end);
+  */
 
   // wait for each task to be terminated
   for (int i=0; i < task_list.size(); i++) 

@@ -7,14 +7,6 @@ extern "C"{
 enum TetrisState{Running, NewBlockDelR, NewBlock, Finished};
 //end of enum TetrisSate()
 
-//key와 lines, 무엇이 들어있는지 알기 위한 bool값으로 이루어진 struct.
-//return을 하기 위해 포장한다.
-struct keyBox{
-  char key;
-  Matrix lines;
-  bool iskey;
-};
-
 //undefined reference to 에러 (static 변수를 사용시)
 //h 라이브러리를 사용하기 때문에 static 변수가 잘못 정의됨?
 //https://5kyc1ad.tistory.com/343
@@ -50,7 +42,7 @@ public:
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
     Matrix createArrayscreen();
     Tetris(int iScreenDyy, int iScreenDxx);
-    TetrisState accept(Msg *msg);
+    Msg accept(Msg *msg);
     int deleteFullLines();
     int checkDeleteLines();
     void addDeleteLines(Matrix delRect);

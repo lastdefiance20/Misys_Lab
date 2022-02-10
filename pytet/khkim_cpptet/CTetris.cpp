@@ -25,12 +25,10 @@ CTetris::CTetris(int Dy, int Dx):Tetris(Dy, Dx){
     num_allocated_Cobjects += 1;
 };
 
-TetrisState CTetris::accept(Msg *msg){
+Msg CTetris::accept(Msg *msg){
     if(msg->what == MSG_MAT){
         //지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
         Matrix delRect = msg->mat;
-        bool isable;
-
         //delRect 추가
         addDeleteLines(delRect);
         iCScreen = Matrix(oCScreen);
@@ -48,7 +46,7 @@ TetrisState CTetris::accept(Msg *msg){
         //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
     }
 
-    state = Tetris::accept(msg);
+    Msg stateMsg = Tetris::accept(msg);
 
     currCBlk = setOfCBlockObjects[idxBlockType*nBlockDegrees + idxBlockDegree];
 
@@ -58,7 +56,7 @@ TetrisState CTetris::accept(Msg *msg){
     oCScreen = Matrix(iCScreen);
     oCScreen.paste(&tempBlk, top, left);
 
-    return state;
+    return stateMsg;
 };
 
 void CTetris::deleteFullLines(){

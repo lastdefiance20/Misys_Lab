@@ -76,23 +76,20 @@ Tetris::Tetris(int Dy, int Dx){
     num_allocated_objects += 1;
 };
 
-TetrisState Tetris::accept(Msg *msg){
+Msg Tetris::accept(Msg *msg){
     state = TetrisState(Running);
     Matrix tempBlk;
 
     if(msg->key==false){
         Matrix delRect = msg->mat;
-        bool isable;
 
         addDeleteLines(delRect);
         iScreen = Matrix(oScreen);
 
-        isable = checkBlock(delRect);
-
-        if(isable == false){
+        if(checkBlock(delRect) == false){
             state = TetrisState(Finished);
         }
-        return state;
+        return Msg(state, '\0', NULL);
     }
 
     char key = msg->key;
@@ -122,7 +119,7 @@ TetrisState Tetris::accept(Msg *msg){
         }
         if (tempBlk.anyGreaterThan(1)) state = TetrisState(Finished);
 
-        return state;
+        return Msg(state, '\0', NULL);
     }
     else if (key == 'q') state = TetrisState(Finished);
     else if (key == 'a') left -= 1;
@@ -173,7 +170,7 @@ TetrisState Tetris::accept(Msg *msg){
         state = TetrisState(NewBlockDelR);
         checkdel = 0;
     }
-    return state;
+    return Msg(state, '\0', NULL);
 };
 
 int Tetris::deleteFullLines(){

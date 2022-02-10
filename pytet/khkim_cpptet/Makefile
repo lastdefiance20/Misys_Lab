@@ -2,7 +2,7 @@
 CC=g++
 CFLAGS=-g -I. -fpermissive -lncursesw
 LDFLAGS=
-MAIN_OBJS=main.o Matrix.o Tetris.o CTetris.o Window.o MsgPubSub.o View.o Model.o TimeCtrl.o KbdCtrl.o ttymodes.o
+MAIN_OBJS=main.o Matrix.o Tetris.o CTetris.o Window.o MsgPubSub.o View.o Model.o TimeCtrl.o KbdCtrl.o ThreadCtrl.o ttymodes.o
 CLIENT_OBJS=cli.o Matrix.o Tetris.o CTetris.o ttymodes.o ClassSetup.o View.o Model.o SendController.o RecvController.o
 SERVER_OBJS=Server.o Matrix.o Tetris.o CTetris.o ttymodes.o ClassSetup.o View.o Model.o SendController.o RecvController.o
 DEBUG=0
