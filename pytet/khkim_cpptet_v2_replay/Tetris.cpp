@@ -8,26 +8,23 @@ int Tetris::nBlockTypes=0;
 int Tetris::nBlockDegrees=0;
 int Tetris::num_allocated_objects=0;
 
-void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
+void Tetris::init(Array2D setOfBlockArrays[], int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
     nBlockTypes = MAX_BLK_TYPES;
     nBlockDegrees = MAX_BLK_DEGREES;
 
     setOfBlockObjects = new Matrix[nBlockTypes*nBlockDegrees];
 
-    int maxnum = 4;
+    int maxnum = 0;
     
     for(int i = 0; i < nBlockTypes; i++){
         for(int j = 0; j < nBlockDegrees; j++){
-            int n = 0;
-            while(1){
-                n += 1;
-                if(setOfBlockArrays[i*nBlockDegrees+j][n] == -1) break;
-            }
-            if(n == 16) n = 4;
-            else if(n == 4) n = 2;
-            else n = 3;
-            //cout<<n<<endl;
-            setOfBlockObjects[i*nBlockDegrees+j] = new Matrix(setOfBlockArrays[i*nBlockDegrees+j], n, n);
+            int row = setOfBlockArrays[i*nBlockDegrees+j].size();
+            if(row>maxnum)
+                maxnum = row;
+            int col = setOfBlockArrays[i*nBlockDegrees+j][0].size();
+            if(col>maxnum)
+                maxnum = col;
+            setOfBlockObjects[i*nBlockDegrees+j] = new Matrix(setOfBlockArrays[i*nBlockDegrees+j], col, row);
         }
     }
 

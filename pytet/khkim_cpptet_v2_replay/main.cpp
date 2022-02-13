@@ -26,50 +26,109 @@
 //순서바꾸기
 
 //T0 = I shape
-int T0D0[] = { 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1 }; //I
-int T0D1[] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, -1 };
-int T0D2[] = { 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1 };
-int T0D3[] = { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1 };
+Array2D T0D0 = {{ 0, 0, 1, 0 }, 
+                { 0, 0, 1, 0 },
+                { 0, 0, 1, 0 },
+                { 0, 0, 1, 0 }}; //I
+
+Array2D T0D1 = {{ 0, 0, 0, 0 }, 
+                { 0, 0, 0, 0 },
+                { 1, 1, 1, 1 },
+                { 0, 0, 0, 0 }};
+
+Array2D T0D2 = {{ 0, 1, 0, 0 }, 
+                { 0, 1, 0, 0 },
+                { 0, 1, 0, 0 },
+                { 0, 1, 0, 0 }};
+
+Array2D T0D3 = {{ 0, 0, 0, 0 }, 
+                { 1, 1, 1, 1 },
+                { 0, 0, 0, 0 },
+                { 0, 0, 0, 0 }};
 
 //T1 = J shape
-int T1D0[] = { 1, 0, 0, 1, 1, 1, 0, 0, 0, -1 };
-int T1D1[] = { 0, 1, 1, 0, 1, 0, 0, 1, 0, -1 };
-int T1D2[] = { 0, 0, 0, 1, 1, 1, 0, 0, 1, -1 };
-int T1D3[] = { 0, 1, 0, 0, 1, 0, 1, 1, 0, -1 };
+Array2D T1D0 = {{ 1, 0, 0 }, 
+                { 1, 1, 1 },
+                { 0, 0, 0 }};
+Array2D T1D1 = {{ 0, 1, 1 }, 
+                { 0, 1, 0 },
+                { 0, 1, 0 }};
+Array2D T1D2 = {{ 0, 0, 0 }, 
+                { 1, 1, 1 },
+                { 0, 0, 1 }};
+Array2D T1D3 = {{ 0, 1, 0 }, 
+                { 0, 1, 0 },
+                { 1, 1, 0 }};
 
 //T2 = L shape
-int T2D0[] = { 0, 0, 1, 1, 1, 1, 0, 0, 0, -1 };
-int T2D1[] = { 0, 1, 0, 0, 1, 0, 0, 1, 1, -1 };
-int T2D2[] = { 0, 0, 0, 1, 1, 1, 1, 0, 0, -1 };
-int T2D3[] = { 1, 1, 0, 0, 1, 0, 0, 1, 0, -1 };
+Array2D T2D0 = {{ 0, 0, 1 }, 
+                { 1, 1, 1 },
+                { 0, 0, 0 }};
+Array2D T2D1 = {{ 0, 1, 0 },
+                { 0, 1, 0 }, 
+                { 0, 1, 1 }};
+Array2D T2D2 = {{ 0, 0, 0 }, 
+                { 1, 1, 1 }, 
+                { 1, 0, 0 }};
+Array2D T2D3 = {{ 1, 1, 0 },
+                { 0, 1, 0 }, 
+                { 0, 1, 0 }};
 
 //T3 = O shape
-int T3D0[] = { 1, 1, 1, 1, -1 };
-int T3D1[] = { 1, 1, 1, 1, -1 };
-int T3D2[] = { 1, 1, 1, 1, -1 };
-int T3D3[] = { 1, 1, 1, 1, -1 };
+Array2D T3D0 = {{ 1, 1 },
+                { 1, 1 }};
+Array2D T3D1 = {{ 1, 1 },
+                { 1, 1 }};
+Array2D T3D2 = {{ 1, 1 },
+                { 1, 1 }};
+Array2D T3D3 = {{ 1, 1 },
+                { 1, 1 }};
 
 //T4 = S shape
-int T4D0[] = { 0, 1, 1, 1, 1, 0, 0, 0, 0, -1 };
-int T4D1[] = { 0, 1, 0, 0, 1, 1, 0, 0, 1, -1 };
-int T4D2[] = { 0, 0, 0, 0, 1, 1, 1, 1, 0, -1 };
-int T4D3[] = { 1, 0, 0, 1, 1, 0, 0, 1, 0, -1 };
+Array2D T4D0 = {{ 0, 1, 1 }, 
+                { 1, 1, 0 }, 
+                { 0, 0, 0 }};
+Array2D T4D1 = {{ 0, 1, 0 }, 
+                { 0, 1, 1 },
+                { 0, 0, 1 }};
+Array2D T4D2 = {{ 0, 0, 0 }, 
+                { 0, 1, 1 }, 
+                { 1, 1, 0 }};
+Array2D T4D3 = {{ 1, 0, 0 }, 
+                { 1, 1, 0 },
+                { 0, 1, 0 }};
 
 //T5 = T shape
-int T5D0[] = { 0, 1, 0, 1, 1, 1, 0, 0, 0, -1 };
-int T5D1[] = { 0, 1, 0, 0, 1, 1, 0, 1, 0, -1 };
-int T5D2[] = { 0, 0, 0, 1, 1, 1, 0, 1, 0, -1 };
-int T5D3[] = { 0, 1, 0, 1, 1, 0, 0, 1, 0, -1 };
+Array2D T5D0 = {{ 0, 1, 0 }, 
+                { 1, 1, 1 },
+                { 0, 0, 0 }};
+Array2D T5D1 = {{ 0, 1, 0 }, 
+                { 0, 1, 1 },
+                { 0, 1, 0 }};
+Array2D T5D2 = {{ 0, 0, 0 }, 
+                { 1, 1, 1 },
+                { 0, 1, 0 }};
+Array2D T5D3 = {{ 0, 1, 0 }, 
+                { 1, 1, 0 },
+                { 0, 1, 0 }};
 
 //T6 = Z shape
-int T6D0[] = { 1, 1, 0, 0, 1, 1, 0, 0, 0, -1 };
-int T6D1[] = { 0, 0, 1, 0, 1, 1, 0, 1, 0, -1 };
-int T6D2[] = { 0, 0, 0, 1, 1, 0, 0, 1, 1, -1 };
-int T6D3[] = { 0, 1, 0, 1, 1, 0, 1, 0, 0, -1 };
+Array2D T6D0 = {{ 1, 1, 0 }, 
+                { 0, 1, 1 },
+                { 0, 0, 0 }};
+Array2D T6D1 = {{ 0, 0, 1 }, 
+                { 0, 1, 1 },
+                { 0, 1, 0 }};
+Array2D T6D2 = {{ 0, 0, 0 }, 
+                { 1, 1, 0 },
+                { 0, 1, 1 }};
+Array2D T6D3 = {{ 0, 1, 0 }, 
+                { 1, 1, 0 },
+                { 1, 0, 0 }};
 
 //블럭을 한번씩 계속 rotate시킨 청사진을 setOfCBlockArrays에 저장하여 블럭이 가능한 모든 state를 표현
 //ex) ㅗ가 저장된 setOfBlockArrays = T1D0 ~ T1D3 = [ㅗ, ㅏ, ㅜ, ㅓ], 총 7가지 블럭
-int *setOfCBlockArrays[] = {
+Array2D setOfCBlockArrays[] = {
   T0D0, T0D1, T0D2, T0D3,
   T1D0, T1D1, T1D2, T1D3,
   T2D0, T2D1, T2D2, T2D3,
@@ -78,21 +137,6 @@ int *setOfCBlockArrays[] = {
   T5D0, T5D1, T5D2, T5D3,
   T6D0, T6D1, T6D2, T6D3,
 };
-/*
-int T0D0[] = { 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1 };
-int T0D1[] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, -1 };
-int T0D2[] = { 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1 };
-int T0D3[] = { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1 };
-*/
-Matrix m0(T0D0, 4, 4);
-Matrix m1(T0D1, 4, 4);
-Matrix m2(T0D2, 4, 4);
-Matrix m3(T0D3, 4, 4);
-  
-Msg msg0(MSG_MAT, 0, &m0);
-Msg msg1(MSG_MAT, 0, &m1);
-Msg msg2(MSG_MAT, 0, &m2);
-Msg msg3(MSG_MAT, 0, &m3);
 
 Msg msg_end(MSG_END, 0, NULL);
 
@@ -141,8 +185,8 @@ int main(int argc, char *argv[])
   Window rght_win(newwin(20, 30, 0, 40));
   //bttm_win.printw("This is the bottom window.\n");
 
-  // create tasks to compose a graph
   if(num == 1){
+    // create tasks to compose a graph
     View *left_view = new View(&left_win, &bttm_win, "left_view");
     Model *left_model = new Model(&bttm_win, "left_model");
     TimeCtrl *time_ctrl = new TimeCtrl(&bttm_win, "time_ctrl", 1);
@@ -163,17 +207,15 @@ int main(int argc, char *argv[])
 
     // connect tasks to compose the graph
     left_model->addSubs(left_view);
-    time_ctrl->addSubs(left_model);
-    kbd_ctrl->addSubs(left_model);
 
     left_model->addSubs(thread_ctrl); //add
     left_model->addSubs(random_ctrl);
 
-    random_ctrl->addSubs(left_model);
-
     time_ctrl->addSubs(log_ctrl);
     kbd_ctrl->addSubs(log_ctrl);
     random_ctrl->addSubs(log_ctrl);
+
+    log_ctrl->addSubs(left_model);
 
     // run a thread for each task
     task = new thread(&View::run, left_view);
@@ -198,6 +240,7 @@ int main(int argc, char *argv[])
     close_screen();
   }
   else if(num == 2){
+    // create tasks to compose a graph
     View *left_view = new View(&left_win, &bttm_win, "left_view");
     Model *left_model = new Model(&bttm_win, "left_model");
     TimeCtrl *time_ctrl = new TimeCtrl(&bttm_win, "time_ctrl", 0.2);
@@ -236,7 +279,7 @@ int main(int argc, char *argv[])
     close_screen();
   }
   else{
-    cout<<"type valid number"<<endl;
+    cout<<"invalid number"<<endl;
   }
   return 0;
 }

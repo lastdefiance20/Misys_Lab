@@ -80,6 +80,14 @@ Matrix::Matrix(int *arr, int col, int row) {
       array[y][x] = arr[y * dx + x];
 }
 
+//input에 2d vector, col, row가 주어졌을 경우 2차원 배열을 matrix로 만들어준다.
+Matrix::Matrix(Array2D& arr, int col, int row) {
+  alloc(col, row);
+  for (int y = 0; y < dy; y++)
+    for (int x = 0; x < dx; x++)
+      array[y][x] = arr[y][x];
+}
+
 Matrix *Matrix::clip(int top, int left, int bottom, int right) {
   int cy = bottom - top;
   int cx = right - left;

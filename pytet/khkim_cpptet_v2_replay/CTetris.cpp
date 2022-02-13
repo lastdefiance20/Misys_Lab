@@ -6,7 +6,7 @@ Matrix* CTetris::setOfCBlockObjects;
 int CTetris::num_allocated_Cobjects=0;
 
 //initialize tetris block
-void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
+void CTetris::init(Array2D setOfBlockArrays[], int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
     Tetris::init(setOfBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
     setOfCBlockObjects = new Matrix[nBlockTypes*nBlockDegrees];
 

@@ -39,7 +39,7 @@ public:
     stack<Matrix> delRects;
     Matrix tempDeleteLine;
 
-    static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
+    static void init(Array2D setOfBlockArrays[], int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
     Matrix createArrayscreen();
     Tetris(int iScreenDyy, int iScreenDxx);
     Msg accept(Msg *msg);

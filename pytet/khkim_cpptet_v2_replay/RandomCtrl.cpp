@@ -12,6 +12,5 @@ void RandomCtrl::handle(Msg *msg){
   if(state == NewBlock){
     key_msg.key = (char)('0' + rand() % 7);
     notifySubs(&key_msg);
-    win->printw("yea");
   }
 }

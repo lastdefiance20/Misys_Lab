@@ -2,7 +2,11 @@
 #include <iostream>
 #include <cstdlib>
 
+#include <vector>
+
 using namespace std;
+
+typedef vector<vector<int>> Array2D;
 
 class Matrix {
 private:
@@ -19,6 +23,7 @@ public:
   Matrix(const Matrix *obj);
   Matrix(const Matrix &obj);
   Matrix(int *arr, int col, int row);
+  Matrix(Array2D& arr, int col, int row);
   Matrix(int cy, int cx, int n);
   ~Matrix();
   Matrix *clip(int top, int left, int bottom, int right);

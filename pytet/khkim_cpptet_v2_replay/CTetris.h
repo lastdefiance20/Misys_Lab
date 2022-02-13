@@ -13,7 +13,7 @@ public:
     Matrix currCBlk;
     Matrix tempCDeleteLine;
 
-    static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
+    static void init(Array2D setOfBlockArrays[], int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
     CTetris(int Dy, int Dx);
     Msg accept(Msg *msg);
     void deleteFullLines();
