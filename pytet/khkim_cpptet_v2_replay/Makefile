@@ -2,16 +2,20 @@
 CC=g++
 CFLAGS=-g -I. -fpermissive -lncursesw
 LDFLAGS=
-MAIN_OBJS=Main.o Matrix.o Tetris.o CTetris.o ttymodes.o ClassSetup.o View.o Model.o SendController.o RecvController.o
+MAIN_OBJS=main.o Matrix.o Tetris.o CTetris.o Window.o MsgPubSub.o View.o Model.o TimeCtrl.o KbdCtrl.o ThreadCtrl.o RandomCtrl.o ReplayCtrl.o LogCtrl.o ttymodes.o
+CLIENT_OBJS=cli.o Matrix.o Tetris.o CTetris.o ttymodes.o ClassSetup.o View.o Model.o SendController.o RecvController.o
 SERVER_OBJS=Server.o Matrix.o Tetris.o CTetris.o ttymodes.o ClassSetup.o View.o Model.o SendController.o RecvController.o
 DEBUG=0
 
-all:: Main.exe Server.exe
+all:: main.exe # cli.exe # svr.exe
 
-Server.exe: $(SERVER_OBJS)
+main.exe: $(MAIN_OBJS)
 	$(CC) -pthread -o $@ $^ $(CFLAGS) $(LDFLAGS_TET)
 
-Main.exe: $(MAIN_OBJS)
+cli.exe: $(CLIENT_OBJS)
+	$(CC) -pthread -o $@ $^ $(CFLAGS) $(LDFLAGS_TET)
+
+svr.exe: $(SERVER_OBJS)
 	$(CC) -pthread -o $@ $^ $(CFLAGS) $(LDFLAGS_TET)
 
 %.o: %.c $(DEPS)

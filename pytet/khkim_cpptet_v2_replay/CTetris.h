@@ -14,12 +14,13 @@ public:
     Matrix tempCDeleteLine;
 
     static void init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES);
-    CTetris(int iScreenDyy, int iScreenDxx);
-    TetrisState accept(keyBox CB);
+    CTetris(int Dy, int Dx);
+    Msg accept(Msg *msg);
     void deleteFullLines();
     int checkDeleteLines();
     Matrix getDelRect();
     void addDeleteLines(Matrix delRect);
+    Matrix getScreen();
     ~CTetris();
 };
 }

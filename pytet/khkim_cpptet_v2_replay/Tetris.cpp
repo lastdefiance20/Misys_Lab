@@ -12,33 +12,7 @@ void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES
     nBlockTypes = MAX_BLK_TYPES;
     nBlockDegrees = MAX_BLK_DEGREES;
 
-    //Tetris.setOfBlockObjects = [[0] * Tetris.nBlockDegrees for _ in range(Tetris.nBlockTypes)]
-
-    try{
-        setOfBlockObjects = new Matrix[nBlockTypes*nBlockDegrees]; //에러구간 1
-        //Matrix *setOfBlockObjects[28];
-        }
-    catch(std::bad_alloc &b) {
-
-        puts("에러 발생 111");
-
-        b.what();
-    }
-
-    /*
-    mat = new int*[r];
-	for (int i = 0; i < r; i++)
-		mat[i] = new int[c];
-    [출처] [c++]동적 할당, 2차원 배열 동적 할당. new, delete|작성자 빵집청년
-    */
-
-    /*
-    for(int i = 0; i < nBlockTypes; i++){
-        if(arrayBlk_maxsize <= len(setOfBlockArrays[i][0])){
-            arrayBlk_maxsize = len(setOfBlockArrays[i][0]);
-        }
-    }
-    */
+    setOfBlockObjects = new Matrix[nBlockTypes*nBlockDegrees];
 
     int maxnum = 4;
     
@@ -48,15 +22,7 @@ void Tetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES
             while(1){
                 n += 1;
                 if(setOfBlockArrays[i*nBlockDegrees+j][n] == -1) break;
-                //cout<<setOfBlockArrays[i*nBlockDegrees+j][n]<<endl;
             }
-            //cout<<n<<endl;
-            /*
-            n = sqrt(n);
-            if(n > maxnum) maxnum = n;
-            cout<<n<<maxnum<<endl;
-            */
-
             if(n == 16) n = 4;
             else if(n == 4) n = 2;
             else n = 3;
@@ -74,7 +40,6 @@ Matrix Tetris::createArrayscreen(){
     arrayScreenDx = iScreenDw*2 + iScreenDx;
     arrayScreenDy = iScreenDy + iScreenDw;
     //cout<<arrayScreenDx<<"/"<<arrayScreenDy<<"/"<<iScreenDw<<"/"<<iScreenDy<<"/"<<iScreenDx<<endl;
-    //arrayScreen = [[0] * self.arrayScreenDx for _ in range(self.arrayScreenDy)]
     int *arrScreen = new int[(arrayScreenDx)*(arrayScreenDy)];
 
     for(int y = 0; y < iScreenDy; y++){
@@ -101,67 +66,68 @@ Matrix Tetris::createArrayscreen(){
     return arrayScreen;
 };
 
-Tetris::Tetris(int iScreenDyy, int iScreenDxx){
-    iScreenDy = iScreenDyy;
-    iScreenDx = iScreenDxx;
+Tetris::Tetris(int Dy, int Dx){
+    iScreenDy = Dy;
+    iScreenDx = Dx;
     idxBlockDegree = 0;
     arrayScreen = createArrayscreen();
     iScreen = Matrix(arrayScreen);
     oScreen = Matrix(iScreen);
-    justStarted = true;
     num_allocated_objects += 1;
+    state = TetrisState(NewBlock);
 };
 
-TetrisState Tetris::accept(keyBox CB){
-    state = TetrisState(Running);
+Msg Tetris::accept(Msg *msg){
     Matrix tempBlk;
 
-    if(CB.iskey==false){
-        Matrix delRect = CB.lines;
-        bool isable;
+    if(msg->key==false){
+        Matrix delRect = msg->mat;
 
         addDeleteLines(delRect);
         iScreen = Matrix(oScreen);
 
-        isable = checkBlock(delRect);
-
-        if(isable == false){
+        if(checkBlock(delRect) == false){
             state = TetrisState(Finished);
         }
-        return state;
+        return Msg(MSG_KEY, state, NULL);
     }
 
-    char key = CB.key;
+    char key = msg->key;
 
     int keynum = key - '0';
 
-    if ((keynum >= 0)&&(keynum <= 6)){
-        if (justStarted == false){
+    if(state == NewBlock){
+        if ((keynum >= 0)&&(keynum <= 6)){
             deleteFullLines();
-        }
-        //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
-        iScreen = Matrix(oScreen);
-        idxBlockType = keynum;
-        //cout<<idxBlockType<<endl;
-        idxBlockDegree = 0;
-        currBlk = setOfBlockObjects[idxBlockType*nBlockDegrees + idxBlockDegree];
-        top = 0;
-        left = iScreenDw + (int)iScreenDx/2 - (int)currBlk.get_dx()/2;
-        tempBlk = iScreen.clip(top, left, top+currBlk.get_dy(), left+currBlk.get_dx());
-        tempBlk = tempBlk.add(&currBlk);
-        justStarted = false;
-        cout<<endl;
+            //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
+            iScreen = Matrix(oScreen);
+            idxBlockType = keynum;
+            //cout<<idxBlockType<<endl;
+            idxBlockDegree = 0;
+            currBlk = setOfBlockObjects[idxBlockType*nBlockDegrees + idxBlockDegree];
+            top = 0;
+            left = iScreenDw + (int)iScreenDx/2 - (int)currBlk.get_dx()/2;
+            tempBlk = iScreen.clip(top, left, top+currBlk.get_dy(), left+currBlk.get_dx());
+            tempBlk = tempBlk.add(&currBlk);
+            cout<<endl;
 
-        oScreen = Matrix(iScreen);
-        oScreen.paste(&tempBlk, top, left);
-        //지워진 줄이 있으면(observer에게 notify시켜야함)
-        if(checkdel>0){
-            state = TetrisState(NewBlockDelR);
-            checkdel = 0;
-        }
-        if (tempBlk.anyGreaterThan(1)) state = TetrisState(Finished);
+            oScreen = Matrix(iScreen);
+            oScreen.paste(&tempBlk, top, left);
+            //지워진 줄이 있으면(observer에게 notify시켜야함)
+            if(checkdel>0){
+                //state = TetrisState(NewBlockDelR);
+                state = TetrisState(Running);
+                checkdel = 0;
+            }
+            else{
+                state = TetrisState(Running);
+            }
+            if (tempBlk.anyGreaterThan(1)) state = TetrisState(Finished);
 
-        return state;
+            return Msg(MSG_KEY, state, NULL);
+        }
+        else
+            return Msg(MSG_KEY, state, NULL);
     }
     else if (key == 'q') state = TetrisState(Finished);
     else if (key == 'a') left -= 1;
@@ -212,7 +178,7 @@ TetrisState Tetris::accept(keyBox CB){
         state = TetrisState(NewBlockDelR);
         checkdel = 0;
     }
-    return state;
+    return Msg(MSG_KEY, state, NULL);
 };
 
 int Tetris::deleteFullLines(){

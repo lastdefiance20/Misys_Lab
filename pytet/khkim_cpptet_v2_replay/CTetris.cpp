@@ -1,8 +1,11 @@
 #include "CTetris.h"
 
 Matrix* CTetris::setOfCBlockObjects;
+
+//use for delete setOfCBlockObjects one time
 int CTetris::num_allocated_Cobjects=0;
 
+//initialize tetris block
 void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREES){
     Tetris::init(setOfBlockArrays, MAX_BLK_TYPES, MAX_BLK_DEGREES);
     setOfCBlockObjects = new Matrix[nBlockTypes*nBlockDegrees];
@@ -15,39 +18,35 @@ void CTetris::init(int **setOfBlockArrays, int MAX_BLK_TYPES, int MAX_BLK_DEGREE
     }
 };
 
-CTetris::CTetris(int iScreenDyy, int iScreenDxx):Tetris(iScreenDyy, iScreenDxx){
+CTetris::CTetris(int Dy, int Dx):Tetris(Dy, Dx){
     arrayScreen = createArrayscreen();
     iCScreen = Matrix(arrayScreen);
     oCScreen = Matrix(iCScreen);
     num_allocated_Cobjects += 1;
 };
 
-TetrisState CTetris::accept(keyBox CB){
-    if(CB.iskey==false){
+Msg CTetris::accept(Msg *msg){
+    if(msg->what == MSG_MAT){
         //지워진 line이 update되어 accept 되었을경우 stack에 추가한다.
-        Matrix delRect = CB.lines;
-        bool isable;
-
+        Matrix delRect = msg->mat;
         //delRect 추가
         addDeleteLines(delRect);
         iCScreen = Matrix(oCScreen);
-        CB.key = 'v';
+        msg->key = 'v';
     }
 
-    char key = CB.key;
+    char key = msg->key;
     Matrix tempBlk;
     int keynum = key - '0';
 
     if ((keynum >= 0)&&(keynum <= 6)){
-        if (justStarted == false) {
-            checkdel = checkDeleteLines();
-            deleteFullLines();
-        }
+        checkdel = checkDeleteLines();
+        deleteFullLines();
         iCScreen = Matrix(oCScreen);
         //블럭을 새로 꺼낼때 stack에 저장된 지워진 줄을 추가한다
     }
 
-    state = Tetris::accept(CB);
+    Msg stateMsg = Tetris::accept(msg);
 
     currCBlk = setOfCBlockObjects[idxBlockType*nBlockDegrees + idxBlockDegree];
 
@@ -57,20 +56,10 @@ TetrisState CTetris::accept(keyBox CB){
     oCScreen = Matrix(iCScreen);
     oCScreen.paste(&tempBlk, top, left);
 
-    return state;
+    return stateMsg;
 };
 
 void CTetris::deleteFullLines(){
-    //iscreenDy = screen y num
-    //iscreenDx = screen x num
-    //iscreenDw = padding
-    /*
-    Dw   /   Dx    / Dw
-    1 1 1 0 0 0 0 0 1 1 1   /Dy
-    */
-
-    //oScreen.print()
-    //oCScreen.print()
     for(int y = 1; y<=iScreenDy-noDeleteLine; y++){
         Matrix tempScreen = oScreen.clip(0, 0, y-1, iScreenDw*2+iScreenDx);
         Matrix line = oScreen.clip(y-1, 0, y, iScreenDw*2+iScreenDx);
@@ -123,7 +112,6 @@ Matrix CTetris::getDelRect(){
 //delRect를 받아 board 추가한다.
 void CTetris::addDeleteLines(Matrix delRect){
     oCScreen = Matrix(iCScreen);
-    //oScreen = Matrix(iScreen);
 
     int delRectdy = delRect.get_dy();
     int delRectdx = delRect.get_dx();
@@ -132,23 +120,24 @@ void CTetris::addDeleteLines(Matrix delRect){
     int y = iScreenDy;
     Matrix delRectNormal(delRectdy, delRectdx, 1);
 
-    //Matrix tempScreen = oScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
     Matrix CtempScreen = oCScreen.clip(delRectdy, 0, y, iScreenDw*2+iScreenDx);
-    
-    //oScreen.paste(&tempScreen,0,0);
-    //oScreen.paste(&delRectNormal,y-delRectdy,0);
 
     oCScreen.paste(&CtempScreen,0,0);
     oCScreen.paste(&delRect,y-delRectdy,0);
 
     iCScreen = Matrix(oCScreen);
-    //iScreen = Matrix(oScreen);
 }
 
+//get oCScreen without padding
+Matrix CTetris::getScreen(){
+    Matrix matScreen = oCScreen.clip(0, iScreenDw, iScreenDy, iScreenDw+iScreenDx);
+    return matScreen;
+}
+
+//delete setOfCBlockObjects
 CTetris::~CTetris(){
     num_allocated_Cobjects -= 1;
     if(num_allocated_Cobjects == 0){
         delete [] setOfCBlockObjects;
-        //cout<<"deleted Tetris"<<endl;
     }
 };
